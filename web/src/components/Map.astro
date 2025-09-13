@@ -1,0 +1,167 @@
+---
+/**
+ * Interactive Map Component
+ * Displays airports on a world map using MapLibre GL JS
+ */
+---
+
+<div id="map" class="map-container"></div>
+<div id="map-loading" class="map-loading">
+  <div class="loading-spinner"></div>
+  <p>Loading map...</p>
+</div>
+
+<script>
+  import maplibregl from 'maplibre-gl';
+  
+  // Initialize map
+  const map = new maplibregl.Map({
+    container: 'map',
+    style: {
+      version: 8,
+      sources: {
+        'raster-tiles': {
+          type: 'raster',
+          tiles: [
+            'https://api.maptiler.com/maps/satellite/256/{z}/{x}/{y}.jpg?key=48F3wFYg8K0uzswJ8cdr'
+          ],
+          tileSize: 256,
+          attribution: '© OpenStreetMap contributors'
+        }
+      },
+      layers: [
+        {
+          id: 'simple-tiles',
+          type: 'raster',
+          source: 'raster-tiles',
+          minzoom: 0,
+          maxzoom: 22
+        }
+      ]
+    },
+    center: [0, 20], // Center on world
+    zoom: 2,
+    maxZoom: 18,
+    minZoom: 1
+  });
+  map.on('style.load', () => {
+    map.setProjection({
+      type: "globe",
+    });
+    map.setLight({
+      anchor: "map",
+      position: [1.5, 90, 80],
+    });
+  })
+  // Hide loading indicator when map loads
+  map.on('load', () => {
+    document.getElementById('map-loading')?.classList.add('hidden');
+  
+    map.addSource("airports", {
+        type: "vector",
+        tiles: ["https://tiles.ayamap.com/airport/{z}/{x}/{y}.mvt"],
+        attribution: "© RadiosMap",
+      });
+    
+    // Add airport points layer
+    map.addLayer({
+      id: 'airports-points',
+      type: 'circle',
+      source: 'airports',
+      'source-layer': 'airports',
+      paint: {
+        'circle-color': '#08ff18',
+        'circle-radius': 2,
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#08ff18'
+      }
+    });
+    
+    // Add click handler for airports
+    map.on('click', 'airports-points', (e) => {
+      if (e.features && e.features.length > 0) {
+        const geometry = e.features[0].geometry as any;
+        const coordinates = geometry.coordinates.slice();
+        const properties = e.features[0].properties;
+        console.log("airports: ",properties)
+        
+        // Create popup content
+        const popupContent = `
+          <div class="p-3">
+            <h3 class="font-bold text-lg mb-2">${properties?.name || properties?.ident || 'Unknown Airport'}</h3>
+            <div class="space-y-1 text-sm mb-3">
+              <p><strong>Code:</strong> ${properties?.ident || 'N/A'}</p>
+              <p><strong>Type:</strong> ${properties?.type?.replace('_', ' ') || 'N/A'}</p>
+              <p><strong>Location:</strong> ${properties?.municipality || 'Unknown'}, ${properties?.iso_country || 'Unknown'}</p>
+              ${properties?.elevation_ft ? `<p><strong>Elevation:</strong> ${properties.elevation_ft} ft</p>` : ''}
+            </div>
+            <div class="flex gap-2">
+              <a href="/airports/${properties?.ident}" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors">
+                View Details
+              </a>
+              ${properties?.iso_country ? `<a href="/countries/${properties.iso_country.toLowerCase()}" class="bg-gray-100 text-gray-700 px-3 py-1 rounded text-sm hover:bg-gray-200 transition-colors">
+                Country Airports
+              </a>` : ''}
+            </div>
+          </div>
+        `;
+        
+        new maplibregl.Popup()
+          .setLngLat(coordinates)
+          .setHTML(popupContent)
+          .addTo(map);
+      }
+    });
+    
+    // Change cursor on hover
+    map.on('mouseenter', 'airports-points', () => {
+      map.getCanvas().style.cursor = 'pointer';
+    });
+    map.on('mouseleave', 'airports-points', () => {
+      map.getCanvas().style.cursor = '';
+    });
+  });
+
+  // Export map instance for external use
+  (window as any).airportMap = map;
+</script>
+
+<style>
+  .map-container {
+    width: 100%;
+    height: 600px;
+    position: relative;
+  }
+  
+  .map-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 2rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  
+  .loading-spinner {
+    width: 2rem;
+    height: 2rem;
+    border: 3px solid #e5e7eb;
+    border-top: 3px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .hidden {
+    display: none;
+  }
+</style>

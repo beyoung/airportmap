@@ -1,0 +1,497 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+// Get country from URL params
+const { country } = Astro.params;
+
+if (!country) {
+  return Astro.redirect('/countries');
+}
+
+const title = `Airports in ${country.toUpperCase()} - AyaMap Airports`;
+const description = `Browse all airports in ${country.toUpperCase()}. Find detailed information about aviation infrastructure.`;
+---
+
+<Layout title={title}>
+	<main class="min-h-screen bg-gray-50">
+		<!-- Header Section -->
+		<section class="bg-white shadow-sm">
+			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+				<div class="flex items-center justify-between">
+					<div>
+						<nav class="flex items-center space-x-2 text-sm text-gray-500 mb-4">
+							<a href="/" class="hover:text-blue-600">Home</a>
+							<span>/</span>
+							<a href="/countries" class="hover:text-blue-600">Countries</a>
+							<span>/</span>
+							<span id="country-code" class="font-medium text-gray-900">{country.toUpperCase()}</span>
+						</nav>
+						<h1 id="page-title" class="text-4xl font-bold text-gray-900 mb-2">
+							Airports in {country.toUpperCase()}
+						</h1>
+						<p id="page-description" class="text-xl text-gray-600">
+							Loading airport information...
+						</p>
+					</div>
+					<div class="flex gap-3">
+						<a href="/countries" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
+							← Back to Countries
+						</a>
+						<button id="view-on-map" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+							🗺️ View on Map
+						</button>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- Search and Filter Section -->
+		<section class="bg-white border-b border-gray-200">
+			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+				<div class="flex flex-col lg:flex-row gap-4 items-center justify-between">
+					<div class="flex flex-col sm:flex-row gap-4 flex-1">
+						<div class="flex-1 max-w-md">
+							<input 
+								type="text" 
+								id="airport-search" 
+								placeholder="Search airports..."
+								class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+							/>
+						</div>
+						<select id="type-filter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+							<option value="">All Types</option>
+							<option value="large_airport">Large Airport</option>
+							<option value="medium_airport">Medium Airport</option>
+							<option value="small_airport">Small Airport</option>
+							<option value="heliport">Heliport</option>
+							<option value="seaplane_base">Seaplane Base</option>
+						</select>
+					</div>
+					<div class="flex gap-2">
+						<select id="sort-select" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+							<option value="name">Sort by Name</option>
+							<option value="type">Sort by Type</option>
+							<option value="municipality">Sort by City</option>
+						</select>
+						<button id="view-toggle" class="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors">
+							<span id="view-icon">📋</span>
+						</button>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- Loading State -->
+		<section id="loading-section" class="py-12">
+			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+				<div class="text-center">
+					<div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+					<p class="text-gray-600">Loading airports...</p>
+				</div>
+			</div>
+		</section>
+
+		<!-- Airports Section -->
+		<section id="airports-section" class="hidden py-8">
+			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+				<!-- Stats Summary -->
+				<div id="stats-summary" class="bg-white rounded-lg shadow-sm p-6 mb-8">
+					<div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+						<div>
+							<div id="total-airports" class="text-3xl font-bold text-blue-600">-</div>
+							<div class="text-gray-600">Total Airports</div>
+						</div>
+						<div>
+							<div id="large-airports" class="text-3xl font-bold text-green-600">-</div>
+							<div class="text-gray-600">Large Airports</div>
+						</div>
+						<div>
+							<div id="medium-airports" class="text-3xl font-bold text-yellow-600">-</div>
+							<div class="text-gray-600">Medium Airports</div>
+						</div>
+						<div>
+							<div id="small-airports" class="text-3xl font-bold text-purple-600">-</div>
+							<div class="text-gray-600">Small Airports</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Airports Grid -->
+				<div id="airports-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+					<!-- Airports will be populated here -->
+				</div>
+
+				<!-- Airports Table (Alternative View) -->
+				<div id="airports-table" class="hidden bg-white rounded-lg shadow-sm overflow-hidden">
+					<table class="min-w-full divide-y divide-gray-200">
+						<thead class="bg-gray-50">
+							<tr>
+								<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Airport</th>
+								<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
+								<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+								<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City</th>
+								<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+							</tr>
+						</thead>
+						<tbody id="airports-table-body" class="bg-white divide-y divide-gray-200">
+							<!-- Table rows will be populated here -->
+						</tbody>
+					</table>
+				</div>
+
+				<!-- Pagination -->
+				<div id="pagination" class="mt-8 flex items-center justify-between">
+					<div class="text-sm text-gray-700">
+						Showing <span id="showing-from">1</span> to <span id="showing-to">20</span> of <span id="showing-total">0</span> airports
+					</div>
+					<div class="flex gap-2">
+						<button id="prev-page" class="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+							Previous
+						</button>
+						<span id="page-info" class="px-3 py-2 text-sm text-gray-700">Page 1</span>
+						<button id="next-page" class="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+							Next
+						</button>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- Error State -->
+		<section id="error-section" class="hidden py-12">
+			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+				<div class="text-center">
+					<div class="text-red-500 text-6xl mb-4">⚠️</div>
+					<h2 class="text-2xl font-bold text-gray-900 mb-2">Failed to Load Airports</h2>
+					<p class="text-gray-600 mb-4">There was an error loading the airports data for this country.</p>
+					<button id="retry-btn" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+						Try Again
+					</button>
+				</div>
+			</div>
+		</section>
+	</main>
+</Layout>
+
+<script define:vars={{ country }}>
+	// Airport data structure (for reference)
+	// Each airport object contains: id, ident, type, name, latitude_deg, longitude_deg,
+	// elevation_ft, iso_country, iso_region, municipality, home_link, wikipedia_link, keywords
+
+	let allAirports = [];
+	let filteredAirports = [];
+	let currentPage = 1;
+	let totalPages = 1;
+	let isGridView = true;
+	const itemsPerPage = 20;
+
+	// DOM elements
+	const loadingSection = document.getElementById('loading-section');
+	const airportsSection = document.getElementById('airports-section');
+	const errorSection = document.getElementById('error-section');
+	const airportsGrid = document.getElementById('airports-grid');
+	const airportsTable = document.getElementById('airports-table');
+	const airportsTableBody = document.getElementById('airports-table-body');
+	const airportSearch = document.getElementById('airport-search');
+	const typeFilter = document.getElementById('type-filter');
+	const sortSelect = document.getElementById('sort-select');
+	const viewToggle = document.getElementById('view-toggle');
+	const viewIcon = document.getElementById('view-icon');
+	const retryBtn = document.getElementById('retry-btn');
+	const viewOnMapBtn = document.getElementById('view-on-map');
+
+	// Stats elements
+	const totalAirportsEl = document.getElementById('total-airports');
+	const largeAirportsEl = document.getElementById('large-airports');
+	const mediumAirportsEl = document.getElementById('medium-airports');
+	const smallAirportsEl = document.getElementById('small-airports');
+
+	// Pagination elements
+	const showingFromEl = document.getElementById('showing-from');
+	const showingToEl = document.getElementById('showing-to');
+	const showingTotalEl = document.getElementById('showing-total');
+	const prevPageBtn = document.getElementById('prev-page');
+	const nextPageBtn = document.getElementById('next-page');
+	const pageInfoEl = document.getElementById('page-info');
+
+	// Page elements
+	const pageTitleEl = document.getElementById('page-title');
+	const pageDescriptionEl = document.getElementById('page-description');
+
+	// Load airports data
+	async function loadAirports() {
+		try {
+			showLoading();
+			
+			// Load all airports without pagination limit
+			const response = await fetch(`/api/countries/${country}/airports?limit=200`);
+			if (!response.ok) {
+				throw new Error('Failed to fetch airports');
+			}
+			
+			const data = await response.json();
+			allAirports = data.airports || [];
+			filteredAirports = [...allAirports];
+			
+			// Update page title and description
+			const countryName = allAirports.length > 0 ? (allAirports[0].iso_country || country).toUpperCase() : country.toUpperCase();
+			pageTitleEl.textContent = `Airports in ${countryName}`;
+			pageDescriptionEl.textContent = `Discover ${allAirports.length} airports in ${countryName}`;
+			
+			updateStats();
+			sortAirports();
+			updatePagination();
+			renderAirports();
+			showAirports();
+			
+		} catch (error) {
+			console.error('Error loading airports:', error);
+			showError();
+		}
+	}
+
+	// Update statistics
+	function updateStats() {
+		const stats = {
+			total: allAirports.length,
+			large: allAirports.filter(a => a.type === 'large_airport').length,
+			medium: allAirports.filter(a => a.type === 'medium_airport').length,
+			small: allAirports.filter(a => a.type === 'small_airport').length
+		};
+		
+		totalAirportsEl.textContent = stats.total.toString();
+		largeAirportsEl.textContent = stats.large.toString();
+		mediumAirportsEl.textContent = stats.medium.toString();
+		smallAirportsEl.textContent = stats.small.toString();
+	}
+
+	// Sort airports
+	function sortAirports() {
+		const sortBy = sortSelect.value;
+		
+		filteredAirports.sort((a, b) => {
+			switch (sortBy) {
+				case 'type':
+					const typeOrder = { 'large_airport': 1, 'medium_airport': 2, 'small_airport': 3 };
+				const aType = typeOrder[a.type || ''] || 999;
+				const bType = typeOrder[b.type || ''] || 999;
+					return aType - bType;
+				case 'municipality':
+					const aMuni = a.municipality || '';
+					const bMuni = b.municipality || '';
+					return aMuni.localeCompare(bMuni);
+				default: // name
+					const aName = a.name || a.ident || '';
+					const bName = b.name || b.ident || '';
+					return aName.localeCompare(bName);
+			}
+		});
+	}
+
+	// Filter airports
+	function filterAirports() {
+		const query = airportSearch.value.toLowerCase().trim();
+		const typeValue = typeFilter.value;
+		
+		filteredAirports = allAirports.filter(airport => {
+			// Text search
+			const matchesQuery = !query || 
+				(airport.name || '').toLowerCase().includes(query) ||
+				(airport.ident || '').toLowerCase().includes(query) ||
+				(airport.municipality || '').toLowerCase().includes(query);
+			
+			// Type filter
+			const matchesType = !typeValue || airport.type === typeValue;
+			
+			return matchesQuery && matchesType;
+		});
+		
+		currentPage = 1;
+		sortAirports();
+		updatePagination();
+		renderAirports();
+	}
+
+	// Update pagination
+	function updatePagination() {
+		totalPages = Math.ceil(filteredAirports.length / itemsPerPage);
+		const startIndex = (currentPage - 1) * itemsPerPage;
+		const endIndex = Math.min(startIndex + itemsPerPage, filteredAirports.length);
+		
+		showingFromEl.textContent = filteredAirports.length > 0 ? (startIndex + 1).toString() : '0';
+		showingToEl.textContent = endIndex.toString();
+		showingTotalEl.textContent = filteredAirports.length.toString();
+		
+		pageInfoEl.textContent = `Page ${currentPage} of ${totalPages}`;
+		
+		prevPageBtn.disabled = currentPage <= 1;
+		nextPageBtn.disabled = currentPage >= totalPages;
+	}
+
+	// Render airports
+	function renderAirports() {
+		const startIndex = (currentPage - 1) * itemsPerPage;
+		const endIndex = startIndex + itemsPerPage;
+		const pageAirports = filteredAirports.slice(startIndex, endIndex);
+		
+		if (isGridView) {
+			renderGrid(pageAirports);
+		} else {
+			renderTable(pageAirports);
+		}
+	}
+
+	// Get airport type badge
+	function getTypeBadge(type) {
+		switch (type) {
+			case 'large_airport':
+				return '<span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded">Large</span>';
+			case 'medium_airport':
+				return '<span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded">Medium</span>';
+			case 'small_airport':
+				return '<span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">Small</span>';
+			case 'heliport':
+				return '<span class="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded">Heliport</span>';
+			case 'seaplane_base':
+				return '<span class="bg-cyan-100 text-cyan-800 text-xs font-medium px-2.5 py-0.5 rounded">Seaplane</span>';
+			default:
+				return '<span class="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded">Other</span>';
+		}
+	}
+
+	// Render grid view
+	function renderGrid(airports) {
+		airportsGrid.innerHTML = airports.map(airport => `
+			<div class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6">
+				<div class="flex items-start justify-between mb-4">
+					<div class="flex-1">
+						<h3 class="text-lg font-semibold text-gray-900 mb-1">${airport.name || airport.ident}</h3>
+						<p class="text-sm text-gray-600">${airport.municipality || 'Unknown City'}</p>
+					</div>
+					<div class="flex flex-col items-end gap-2">
+						<span class="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded">${airport.ident}</span>
+						${getTypeBadge(airport.type)}
+					</div>
+				</div>
+				<div class="space-y-2 mb-4">
+					${airport.latitude_deg && airport.longitude_deg ? `
+						<div class="text-sm text-gray-600">
+							📍 ${airport.latitude_deg.toFixed(4)}, ${airport.longitude_deg.toFixed(4)}
+						</div>
+					` : ''}
+					${airport.elevation_ft ? `
+						<div class="text-sm text-gray-600">
+							⛰️ ${airport.elevation_ft} ft elevation
+						</div>
+					` : ''}
+				</div>
+				<div class="flex gap-2">
+					<a href="/airports/${airport.ident}" class="flex-1 bg-blue-600 text-white text-center py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+						View Details
+					</a>
+					${airport.home_link ? `
+						<a href="${airport.home_link}" target="_blank" class="bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
+							🔗
+						</a>
+					` : ''}
+				</div>
+			</div>
+		`).join('');
+	}
+
+	// Render table view
+	function renderTable(airports) {
+		airportsTableBody.innerHTML = airports.map(airport => `
+			<tr class="hover:bg-gray-50">
+				<td class="px-6 py-4 whitespace-nowrap">
+					<div class="text-sm font-medium text-gray-900">${airport.name || airport.ident}</div>
+					<div class="text-sm text-gray-500">${airport.municipality || 'Unknown City'}</div>
+				</td>
+				<td class="px-6 py-4 whitespace-nowrap">
+					<span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">${airport.ident}</span>
+				</td>
+				<td class="px-6 py-4 whitespace-nowrap">
+					${getTypeBadge(airport.type)}
+				</td>
+				<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+					${airport.municipality || '-'}
+				</td>
+				<td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+					<a href="/airports/${airport.ident}" class="text-blue-600 hover:text-blue-900 mr-3">Details</a>
+					${airport.home_link ? `<a href="${airport.home_link}" target="_blank" class="text-gray-600 hover:text-gray-900">🔗</a>` : ''}
+				</td>
+			</tr>
+		`).join('');
+	}
+
+	// Toggle view
+	function toggleView() {
+		isGridView = !isGridView;
+		
+		if (isGridView) {
+			airportsGrid.classList.remove('hidden');
+			airportsTable.classList.add('hidden');
+			viewIcon.textContent = '📋';
+		} else {
+			airportsGrid.classList.add('hidden');
+			airportsTable.classList.remove('hidden');
+			viewIcon.textContent = '🔲';
+		}
+		
+		renderAirports();
+	}
+
+	// Show/hide sections
+	function showLoading() {
+		loadingSection.classList.remove('hidden');
+		airportsSection.classList.add('hidden');
+		errorSection.classList.add('hidden');
+	}
+
+	function showAirports() {
+		loadingSection.classList.add('hidden');
+		airportsSection.classList.remove('hidden');
+		errorSection.classList.add('hidden');
+	}
+
+	function showError() {
+		loadingSection.classList.add('hidden');
+		airportsSection.classList.add('hidden');
+		errorSection.classList.remove('hidden');
+	}
+
+	// Event listeners
+	airportSearch.addEventListener('input', filterAirports);
+	typeFilter.addEventListener('change', filterAirports);
+	sortSelect.addEventListener('change', () => {
+		sortAirports();
+		renderAirports();
+	});
+	viewToggle.addEventListener('click', toggleView);
+	retryBtn.addEventListener('click', loadAirports);
+
+	// Pagination event listeners
+	prevPageBtn.addEventListener('click', () => {
+		if (currentPage > 1) {
+			currentPage--;
+			updatePagination();
+			renderAirports();
+		}
+	});
+
+	nextPageBtn.addEventListener('click', () => {
+		if (currentPage < totalPages) {
+			currentPage++;
+			updatePagination();
+			renderAirports();
+		}
+	});
+
+	// View on map button
+	viewOnMapBtn.addEventListener('click', () => {
+		window.location.href = `/?country=${country}`;
+	});
+
+	// Initialize
+	loadAirports();
+</script>

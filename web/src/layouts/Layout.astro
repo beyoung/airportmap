@@ -1,0 +1,90 @@
+---
+export interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = 'Global Airport Database - Find airports worldwide with interactive maps and detailed information' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content={description} />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    
+    <!-- Preload critical resources -->
+    <link rel="preconnect" href="https://api.mapbox.com" />
+  </head>
+  <body class="bg-gray-50 text-gray-900">
+    <header class="bg-white shadow-sm border-b">
+      <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <div class="flex items-center">
+            <a href="/" class="text-xl font-bold text-primary-600">
+              ✈️ AirportMap
+            </a>
+          </div>
+          <div class="hidden md:block">
+            <div class="ml-10 flex items-baseline space-x-4">
+              <a href="/" class="text-gray-600 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                Home
+              </a>
+              <a href="/airports" class="text-gray-600 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                Browse Airports
+              </a>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+    
+    <main>
+      <slot />
+    </main>
+    
+    <footer class="bg-white border-t mt-auto">
+      <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <div class="text-center text-gray-600">
+          <p>&copy; 2024 AirportMap. Built with Astro and MapLibre GL JS.</p>
+          <p class="mt-2 text-sm">
+            Data sourced from open aviation databases. 
+            <a href="https://github.com" class="text-primary-600 hover:text-primary-700">View on GitHub</a>
+          </p>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
+
+<style>
+  html {
+    font-family: system-ui, sans-serif;
+  }
+  
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  main {
+    flex: 1;
+  }
+</style>
+
+<script>
+  import '../styles/global.css';
+</script>

@@ -1,0 +1,359 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { AirportDatabase } from '../../lib/database';
+
+const db = (Astro.locals as any).runtime?.env?.DB;
+if (!db) {
+	throw new Error('Database not available');
+}
+
+const airportDb = new AirportDatabase(db);
+const countries = await airportDb.getCountryStats();
+
+const title = 'Countries - AyaMap Airports';
+const description = 'Browse airports by country. Explore aviation infrastructure across different nations and territories worldwide.';
+const canonicalUrl = 'https://ayamap-airports.pages.dev/countries';
+---
+
+<Layout title={title}>
+	<!-- SEO Meta Tags -->
+	<meta name="description" content={description} slot="head" />
+	<meta name="keywords" content="airports by country, world airports, aviation, international airports, country airports" slot="head" />
+	<link rel="canonical" href={canonicalUrl} slot="head" />
+	
+	<!-- Open Graph Meta Tags -->
+	<meta property="og:title" content={title} slot="head" />
+	<meta property="og:description" content={description} slot="head" />
+	<meta property="og:url" content={canonicalUrl} slot="head" />
+	<meta property="og:type" content="website" slot="head" />
+	
+	<!-- Structured Data -->
+	<script type="application/ld+json" slot="head">
+	{
+		"@context": "https://schema.org",
+		"@type": "CollectionPage",
+		"name": "Airport Countries Directory",
+		"description": "Directory of airports organized by country",
+		"url": "https://ayamap-airports.pages.dev/countries",
+		"mainEntity": {
+			"@type": "ItemList",
+			"numberOfItems": countries.length,
+			"itemListElement": countries.slice(0, 10).map((country, index) => ({
+				"@type": "ListItem",
+				"position": index + 1,
+				"item": {
+					"@type": "Place",
+					"name": country.country_name || country.country,
+					"url": `https://ayamap-airports.pages.dev/countries/${country.country?.toLowerCase()}`
+				}
+			}))
+		}
+	}
+	</script>
+
+	<main class="min-h-screen bg-gray-50">
+		<!-- Header Section -->
+		<section class="bg-white shadow-sm">
+			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+				<div class="text-center">
+					<h1 class="text-4xl font-bold text-gray-900 mb-4">
+						Countries & Territories
+					</h1>
+					<p class="text-xl text-gray-600 mb-6">
+						Explore airports by country and discover aviation infrastructure worldwide
+					</p>
+				</div>
+			</div>
+		</section>
+
+		<!-- Search and Filter Section -->
+		<section class="bg-white border-b border-gray-200">
+			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+				<div class="flex flex-col sm:flex-row gap-4 items-center justify-between">
+					<div class="flex-1 max-w-md">
+						<input 
+							type="text" 
+							id="country-search" 
+							placeholder="Search countries..."
+							class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+						/>
+					</div>
+					<div class="flex gap-2">
+						<select id="sort-select" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+							<option value="name">Sort by Name</option>
+							<option value="airports">Sort by Airport Count</option>
+						</select>
+						<button id="view-toggle" class="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors">
+							<span id="view-icon">📋</span>
+						</button>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- Loading State -->
+		<section id="loading-section" class="py-12">
+			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+				<div class="text-center">
+					<div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+					<p class="text-gray-600">Loading countries...</p>
+				</div>
+			</div>
+		</section>
+
+		<!-- Countries Grid -->
+		<section id="countries-section" class="hidden py-8">
+			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+				<!-- Stats Summary -->
+				<div id="stats-summary" class="bg-white rounded-lg shadow-sm p-6 mb-8">
+					<div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+						<div>
+							<div id="total-countries" class="text-3xl font-bold text-blue-600">-</div>
+							<div class="text-gray-600">Countries & Territories</div>
+						</div>
+						<div>
+							<div id="total-airports" class="text-3xl font-bold text-green-600">-</div>
+							<div class="text-gray-600">Total Airports</div>
+						</div>
+						<div>
+							<div id="avg-airports" class="text-3xl font-bold text-purple-600">-</div>
+							<div class="text-gray-600">Average per Country</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Countries List -->
+				<div id="countries-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+					<!-- Countries will be populated here -->
+				</div>
+
+				<!-- Countries Table (Alternative View) -->
+				<div id="countries-table" class="hidden bg-white rounded-lg shadow-sm overflow-hidden">
+					<table class="min-w-full divide-y divide-gray-200">
+						<thead class="bg-gray-50">
+							<tr>
+								<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
+								<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
+								<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Airports</th>
+								<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+							</tr>
+						</thead>
+						<tbody id="countries-table-body" class="bg-white divide-y divide-gray-200">
+							<!-- Table rows will be populated here -->
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</section>
+
+		<!-- Error State -->
+		<section id="error-section" class="hidden py-12">
+			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+				<div class="text-center">
+					<div class="text-red-500 text-6xl mb-4">⚠️</div>
+					<h2 class="text-2xl font-bold text-gray-900 mb-2">Failed to Load Countries</h2>
+					<p class="text-gray-600 mb-4">There was an error loading the countries data.</p>
+					<button id="retry-btn" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+						Try Again
+					</button>
+				</div>
+			</div>
+		</section>
+	</main>
+</Layout>
+
+<script>
+	interface CountryStats {
+		country: string;
+		country_name: string | null;
+		airport_count: number;
+	}
+
+	let allCountries: CountryStats[] = [];
+	let filteredCountries: CountryStats[] = [];
+	let isGridView = true;
+
+	// DOM elements
+	const loadingSection = document.getElementById('loading-section')!;
+	const countriesSection = document.getElementById('countries-section')!;
+	const errorSection = document.getElementById('error-section')!;
+	const countriesGrid = document.getElementById('countries-grid')!;
+	const countriesTable = document.getElementById('countries-table')!;
+	const countriesTableBody = document.getElementById('countries-table-body')!;
+	const countrySearch = document.getElementById('country-search') as HTMLInputElement;
+	const sortSelect = document.getElementById('sort-select') as unknown as HTMLSelectElement;
+	const viewToggle = document.getElementById('view-toggle')!;
+	const viewIcon = document.getElementById('view-icon')!;
+	const retryBtn = document.getElementById('retry-btn')!;
+
+	// Stats elements
+	const totalCountriesEl = document.getElementById('total-countries')!;
+	const totalAirportsEl = document.getElementById('total-airports')!;
+	const avgAirportsEl = document.getElementById('avg-airports')!;
+
+	// Load countries data
+	async function loadCountries() {
+		try {
+			showLoading();
+			
+			const response = await fetch('/api/countries/stats');
+			if (!response.ok) {
+				throw new Error('Failed to fetch countries');
+			}
+			
+			const data: any = await response.json();
+			allCountries = data.countries || [];
+			filteredCountries = [...allCountries];
+			
+			updateStats();
+			sortCountries();
+			renderCountries();
+			showCountries();
+			
+		} catch (error) {
+			console.error('Error loading countries:', error);
+			showError();
+		}
+	}
+
+	// Update statistics
+	function updateStats() {
+		const totalCountries = allCountries.length;
+		const totalAirports = allCountries.reduce((sum, country) => sum + country.airport_count, 0);
+		const avgAirports = totalCountries > 0 ? Math.round(totalAirports / totalCountries) : 0;
+		
+		totalCountriesEl.textContent = totalCountries.toLocaleString();
+		totalAirportsEl.textContent = totalAirports.toLocaleString();
+		avgAirportsEl.textContent = avgAirports.toString();
+	}
+
+	// Sort countries
+	function sortCountries() {
+		const sortBy = sortSelect.value;
+		
+		filteredCountries.sort((a, b) => {
+			if (sortBy === 'airports') {
+				return b.airport_count - a.airport_count;
+			} else {
+				const nameA = a.country_name || a.country;
+				const nameB = b.country_name || b.country;
+				return nameA.localeCompare(nameB);
+			}
+		});
+	}
+
+	// Filter countries
+	function filterCountries() {
+		const query = countrySearch.value.toLowerCase().trim();
+		
+		if (!query) {
+			filteredCountries = [...allCountries];
+		} else {
+			filteredCountries = allCountries.filter(country => 
+					(country.country_name || '').toLowerCase().includes(query) ||
+					country.country.toLowerCase().includes(query)
+				);
+		}
+		
+		sortCountries();
+		renderCountries();
+	}
+
+	// Render countries
+	function renderCountries() {
+		if (isGridView) {
+			renderGrid();
+		} else {
+			renderTable();
+		}
+	}
+
+	// Render grid view
+	function renderGrid() {
+		countriesGrid.innerHTML = filteredCountries.map(country => `
+			<div class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6">
+				<div class="flex items-center justify-between mb-4">
+					<h3 class="text-lg font-semibold text-gray-900">${country.country_name || country.country}</h3>
+					<span class="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded">${country.country}</span>
+				</div>
+				<div class="mb-4">
+					<div class="text-3xl font-bold text-blue-600 mb-1">${country.airport_count.toLocaleString()}</div>
+					<div class="text-sm text-gray-600">Airport${country.airport_count !== 1 ? 's' : ''}</div>
+				</div>
+				<div class="flex gap-2">
+					<a href="/countries/${country.country}" class="flex-1 bg-blue-600 text-white text-center py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+						View Airports
+					</a>
+				</div>
+			</div>
+		`).join('');
+	}
+
+	// Render table view
+	function renderTable() {
+		countriesTableBody.innerHTML = filteredCountries.map(country => `
+			<tr class="hover:bg-gray-50">
+				<td class="px-6 py-4 whitespace-nowrap">
+					<div class="text-sm font-medium text-gray-900">${country.country_name || country.country}</div>
+				</td>
+				<td class="px-6 py-4 whitespace-nowrap">
+					<span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">${country.country}</span>
+				</td>
+				<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+					${country.airport_count.toLocaleString()}
+				</td>
+				<td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+					<a href="/countries/${country.country}" class="text-blue-600 hover:text-blue-900">View Airports</a>
+				</td>
+			</tr>
+		`).join('');
+	}
+
+	// Toggle view
+	function toggleView() {
+		isGridView = !isGridView;
+		
+		if (isGridView) {
+			countriesGrid.classList.remove('hidden');
+			countriesTable.classList.add('hidden');
+			viewIcon.textContent = '📋';
+		} else {
+			countriesGrid.classList.add('hidden');
+			countriesTable.classList.remove('hidden');
+			viewIcon.textContent = '🔲';
+		}
+		
+		renderCountries();
+	}
+
+	// Show/hide sections
+	function showLoading() {
+		loadingSection.classList.remove('hidden');
+		countriesSection.classList.add('hidden');
+		errorSection.classList.add('hidden');
+	}
+
+	function showCountries() {
+		loadingSection.classList.add('hidden');
+		countriesSection.classList.remove('hidden');
+		errorSection.classList.add('hidden');
+	}
+
+	function showError() {
+		loadingSection.classList.add('hidden');
+		countriesSection.classList.add('hidden');
+		errorSection.classList.remove('hidden');
+	}
+
+	// Event listeners
+	countrySearch.addEventListener('input', filterCountries);
+	sortSelect.addEventListener('change', () => {
+		sortCountries();
+		renderCountries();
+	});
+	viewToggle.addEventListener('click', toggleView);
+	retryBtn.addEventListener('click', loadCountries);
+
+	// Initialize
+	loadCountries();
+</script>

@@ -1,0 +1,18 @@
+name = "airports-website"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# D1 Database configuration
+[[d1_databases]]
+binding = "DB"
+database_name = "airports-db"
+database_id = "aca4ae33-a7ac-465b-8429-986bf038f5c4"
+
+# Pages configuration for deployment
+[env.production]
+name = "airports-website-production"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "airports-db-production"
+database_id = "43077111-4de6-4375-b5d3-40cf344cfec4"
