@@ -8,7 +8,7 @@
 
 - **文件名**: `airports.db`
 - **格式**: SQLite 3
-- **总记录数**: 83,247条机场记录，43,329条地址记录
+- **总记录数**: 83,247条机场记录，43,329条地址记录，246个国家统计记录
 - **数据来源**: airports.csv
 
 ## 表结构
@@ -53,38 +53,55 @@
 | 字段名 | 数据类型 | 约束 | 描述 |
 |--------|----------|------|------|
 | id | INTEGER | PRIMARY KEY AUTOINCREMENT | 地址唯一标识符 |
-| iso_country | TEXT | NOT NULL | ISO 3166-1 alpha-2国家代码 |
-| iso_region | TEXT | NOT NULL | ISO 3166-2地区代码 |
+| country | TEXT | NOT NULL | ISO 3166-1 alpha-2国家代码 |
+| region | TEXT | | ISO 3166-2地区代码 |
 | municipality | TEXT | | 城市/自治区名称 |
 | country_name | TEXT | | 真实国家名称（如"United States"） |
 | region_name | TEXT | | 真实地区名称（如"California"） |
 
 **索引**:
-- `idx_address_country`: iso_country字段索引
-- `idx_address_region`: iso_region字段索引
-- `idx_address_municipality`: municipality字段索引
+- `idx_address_country`: country字段索引
 - `idx_address_country_name`: country_name字段索引
 - `idx_address_region_name`: region_name字段索引
+
+### 3. country_stats 表（国家统计表）
+
+存储各国机场数量统计信息，支持快速统计查询。
+
+| 字段名 | 数据类型 | 约束 | 描述 |
+|--------|----------|------|------|
+| id | INTEGER | PRIMARY KEY AUTOINCREMENT | 统计记录唯一标识符 |
+| country_code | TEXT | NOT NULL UNIQUE | ISO 3166-1 alpha-2国家代码 |
+| country_name | TEXT | | 真实国家名称 |
+| airport_count | INTEGER | DEFAULT 0 | 该国机场总数 |
+| last_updated | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | 最后更新时间 |
+
+**索引**:
+- `idx_country_stats_code`: country_code字段索引
+- `idx_country_stats_name`: country_name字段索引
 
 ## 表关系
 
 ```
-airport (1) ←→ (N) address
+airport (N) ←→ (1) address
+airport (N) ←→ (1) country_stats (通过iso_country关联)
 ```
 
-- **关系类型**: 多对一
-- **外键**: airport.address_id → address.id
-- **说明**: 多个机场可以共享同一个地址记录，实现数据去重和存储优化
+- **airport ↔ address**: 多对一关系，外键airport.address_id → address.id
+- **airport ↔ country_stats**: 多对一关系，通过airport.iso_country与country_stats.country_code关联
+- **说明**: 多个机场可以共享同一个地址记录，实现数据去重和存储优化；国家统计表提供预计算的统计数据
 
 ## 机场类型统计
 
 | 类型 | 数量 | 描述 |
 |------|------|------|
-| small_airport | 58,392 | 小型机场 |
-| heliport | 10,830 | 直升机场 |
-| medium_airport | 5,521 | 中型机场 |
-| closed | 3,877 | 已关闭机场 |
-| seaplane_base | 3,627 | 水上飞机基地 |
+| small_airport | 42,249 | 小型机场 |
+| heliport | 21,914 | 直升机场 |
+| closed | 12,623 | 已关闭机场 |
+| medium_airport | 4,687 | 中型机场 |
+| seaplane_base | 1,232 | 水上飞机基地 |
+| large_airport | 485 | 大型机场 |
+| balloonport | 57 | 气球港 |
 
 ## 国家分布（前10）
 
@@ -114,6 +131,8 @@ airport (1) ←→ (N) address
 2. **国家/地区查询**: 分别为ISO代码和真实名称创建索引
 3. **类型筛选**: `idx_airport_type`索引支持快速按机场类型筛选
 4. **关联查询**: `idx_airport_address`索引优化表连接性能
+5. **统计查询**: `country_stats`表提供预计算的国家统计数据，避免实时聚合计算
+6. **国家统计**: 使用`idx_country_stats_code`和`idx_country_stats_name`索引快速查询国家统计信息
 
 ## 使用建议
 
@@ -121,6 +140,8 @@ airport (1) ←→ (N) address
 2. **统计分析**: 利用真实名称字段进行用户友好的统计报告
 3. **数据导出**: 可以选择性导出ISO代码或真实名称，满足不同应用需求
 4. **扩展性**: 地址表设计支持未来添加更多地理信息字段
+5. **快速统计**: 使用`country_stats`表获取国家级统计数据，避免复杂的JOIN和GROUP BY操作
+6. **数据一致性**: 统计表会在数据更新时自动刷新，确保统计数据的准确性
 
 ## 相关文件
 

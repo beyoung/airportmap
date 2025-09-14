@@ -35,7 +35,7 @@
           type: 'raster',
           source: 'raster-tiles',
           minzoom: 0,
-          maxzoom: 22
+          maxzoom: 14
         }
       ]
     },
@@ -45,13 +45,13 @@
     minZoom: 1
   });
   map.on('style.load', () => {
-    map.setProjection({
-      type: "globe",
-    });
-    map.setLight({
-      anchor: "map",
-      position: [1.5, 90, 80],
-    });
+    // map.setProjection({
+    //   type: "globe",
+    // });
+    // map.setLight({
+    //   anchor: "map",
+    //   position: [1.5, 90, 80],
+    // });
   })
   // Hide loading indicator when map loads
   map.on('load', () => {
@@ -74,7 +74,9 @@
         'circle-radius': 2,
         'circle-stroke-width': 2,
         'circle-stroke-color': '#08ff18'
-      }
+      },
+      minzoom: 0,
+      maxzoom: 14
     });
     
     // Add click handler for airports
@@ -83,7 +85,6 @@
         const geometry = e.features[0].geometry as any;
         const coordinates = geometry.coordinates.slice();
         const properties = e.features[0].properties;
-        console.log("airports: ",properties)
         
         // Create popup content
         const popupContent = `

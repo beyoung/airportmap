@@ -8,7 +8,7 @@ CSV to SQLite Converter for Airport Data
 import csv
 import sqlite3
 import sys
-from typing import Dict, Any, Optional
+from iso_mappings import get_country_name, get_full_region_name
 
 def create_database_schema(conn: sqlite3.Connection) -> None:
     """
@@ -26,6 +26,8 @@ def create_database_schema(conn: sqlite3.Connection) -> None:
             country TEXT NOT NULL,
             region TEXT,
             municipality TEXT,
+            country_name TEXT,
+            region_name TEXT,
             UNIQUE(country, region, municipality)
         )
     """)
@@ -55,11 +57,32 @@ def create_database_schema(conn: sqlite3.Connection) -> None:
         )
     """)
     
+    # 创建国家统计表
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS country_stats (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            country_code TEXT NOT NULL UNIQUE,
+            country_name TEXT,
+            airport_count INTEGER DEFAULT 0,
+            large_airport_count INTEGER DEFAULT 0,
+            medium_airport_count INTEGER DEFAULT 0,
+            small_airport_count INTEGER DEFAULT 0,
+            heliport_count INTEGER DEFAULT 0,
+            seaplane_base_count INTEGER DEFAULT 0,
+            other_count INTEGER DEFAULT 0,
+            last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
     # 创建索引以提高查询性能
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_airport_ident ON airport(ident)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_airport_country ON airport(iso_country)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_airport_type ON airport(type)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_address_country ON address(country)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_address_country_name ON address(country_name)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_address_region_name ON address(region_name)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_country_stats_code ON country_stats(country_code)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_country_stats_name ON country_stats(country_name)")
     
     conn.commit()
     print("数据库表结构创建完成")
@@ -70,8 +93,8 @@ def get_or_create_address(cursor: sqlite3.Cursor, country: str, region: str, mun
     
     Args:
         cursor: 数据库游标
-        country: 国家
-        region: 地区
+        country: 国家代码
+        region: 地区代码
         municipality: 城市
         
     Returns:
@@ -97,11 +120,15 @@ def get_or_create_address(cursor: sqlite3.Cursor, country: str, region: str, mun
     if result:
         return result[0]
     
+    # 转换ISO代码为真实名称
+    country_name = get_country_name(country) if country else None
+    region_name = get_full_region_name(country, region) if region else None
+    
     # 创建新地址记录
     cursor.execute("""
-        INSERT INTO address (country, region, municipality) 
-        VALUES (?, ?, ?)
-    """, (country, region, municipality))
+        INSERT INTO address (country, region, municipality, country_name, region_name) 
+        VALUES (?, ?, ?, ?, ?)
+    """, (country, region, municipality, country_name, region_name))
     
     return cursor.lastrowid
 
@@ -216,6 +243,33 @@ def convert_csv_to_sqlite(csv_file_path: str, db_file_path: str) -> None:
         # 最终提交
         conn.commit()
         
+        # 填充国家统计表
+        print("\n正在生成国家统计数据...")
+        cursor.execute("""
+            INSERT OR REPLACE INTO country_stats (
+                country_code, country_name, airport_count, 
+                large_airport_count, medium_airport_count, small_airport_count,
+                heliport_count, seaplane_base_count, other_count, last_updated
+            )
+            SELECT 
+                a.iso_country as country_code,
+                addr.country_name,
+                COUNT(a.id) as airport_count,
+                SUM(CASE WHEN a.type = 'large_airport' THEN 1 ELSE 0 END) as large_airport_count,
+                SUM(CASE WHEN a.type = 'medium_airport' THEN 1 ELSE 0 END) as medium_airport_count,
+                SUM(CASE WHEN a.type = 'small_airport' THEN 1 ELSE 0 END) as small_airport_count,
+                SUM(CASE WHEN a.type = 'heliport' THEN 1 ELSE 0 END) as heliport_count,
+                SUM(CASE WHEN a.type = 'seaplane_base' THEN 1 ELSE 0 END) as seaplane_base_count,
+                SUM(CASE WHEN a.type NOT IN ('large_airport', 'medium_airport', 'small_airport', 'heliport', 'seaplane_base') OR a.type IS NULL THEN 1 ELSE 0 END) as other_count,
+                CURRENT_TIMESTAMP as last_updated
+            FROM airport a
+            LEFT JOIN address addr ON a.address_id = addr.id
+            WHERE a.iso_country IS NOT NULL
+            GROUP BY a.iso_country, addr.country_name
+        """)
+        
+        conn.commit()
+        
         # 统计信息
         cursor.execute("SELECT COUNT(*) FROM airport")
         total_airports = cursor.fetchone()[0]
@@ -223,11 +277,15 @@ def convert_csv_to_sqlite(csv_file_path: str, db_file_path: str) -> None:
         cursor.execute("SELECT COUNT(*) FROM address")
         total_addresses = cursor.fetchone()[0]
         
+        cursor.execute("SELECT COUNT(*) FROM country_stats")
+        total_countries = cursor.fetchone()[0]
+        
         print(f"\n转换完成！")
         print(f"输入文件: {csv_file_path}")
         print(f"输出数据库: {db_file_path}")
-        print(f"机场记录数: {total_airports}")
-        print(f"地址记录数: {total_addresses}")
+        print(f"总机场数: {total_airports}")
+        print(f"总地址数: {total_addresses}")
+        print(f"总国家数: {total_countries}")
         print(f"错误记录数: {error_count}")
         
         # 显示一些统计信息
@@ -256,6 +314,46 @@ def convert_csv_to_sqlite(csv_file_path: str, db_file_path: str) -> None:
         for country, count in cursor.fetchall():
             print(f"  {country}: {count}")
         
+        # 显示地址区域的机场统计
+        cursor.execute("""
+            SELECT 
+                COALESCE(a.country_name, a.country) as country_display,
+                COALESCE(a.region_name, a.region) as region_display,
+                a.municipality, 
+                COUNT(ap.id) as airport_count
+            FROM address a
+            LEFT JOIN airport ap ON a.id = ap.address_id
+            GROUP BY a.country, a.region, a.municipality
+            HAVING airport_count > 0
+            ORDER BY airport_count DESC
+            LIMIT 15
+        """)
+        
+        print("\n地址区域机场统计（前15）:")
+        for country_display, region_display, municipality, airport_count in cursor.fetchall():
+            location = f"{country_display}"
+            if region_display:
+                location += f", {region_display}"
+            if municipality:
+                location += f", {municipality}"
+            print(f"  {location}: {airport_count} 个机场")
+        
+        # 显示国家统计
+        print("\n国家机场统计 (前15个):")
+        cursor.execute("""
+            SELECT 
+                COALESCE(country_name, country_code) as country_display,
+                airport_count
+            FROM country_stats
+            ORDER BY airport_count DESC
+            LIMIT 15
+        """)
+        
+        for country_display, airport_count in cursor.fetchall():
+            print(f"  {country_display}: {airport_count} 个机场")
+        
+        print("\n数据库创建完成！")
+         
     except FileNotFoundError:
         print(f"错误: 找不到文件 {csv_file_path}")
         sys.exit(1)

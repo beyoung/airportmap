@@ -96,7 +96,7 @@ const description = `Browse all airports in ${country.toUpperCase()}. Find detai
 			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 				<!-- Stats Summary -->
 				<div id="stats-summary" class="bg-white rounded-lg shadow-sm p-6 mb-8">
-					<div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+					<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 text-center">
 						<div>
 							<div id="total-airports" class="text-3xl font-bold text-blue-600">-</div>
 							<div class="text-gray-600">Total Airports</div>
@@ -112,6 +112,14 @@ const description = `Browse all airports in ${country.toUpperCase()}. Find detai
 						<div>
 							<div id="small-airports" class="text-3xl font-bold text-purple-600">-</div>
 							<div class="text-gray-600">Small Airports</div>
+						</div>
+						<div>
+							<div id="heliports" class="text-3xl font-bold text-orange-600">-</div>
+							<div class="text-gray-600">Heliports</div>
+						</div>
+						<div>
+							<div id="seaplane-bases" class="text-3xl font-bold text-cyan-600">-</div>
+							<div class="text-gray-600">Seaplane Bases</div>
 						</div>
 					</div>
 				</div>
@@ -140,10 +148,7 @@ const description = `Browse all airports in ${country.toUpperCase()}. Find detai
 				</div>
 
 				<!-- Pagination -->
-				<div id="pagination" class="mt-8 flex items-center justify-between">
-					<div class="text-sm text-gray-700">
-						Showing <span id="showing-from">1</span> to <span id="showing-to">20</span> of <span id="showing-total">0</span> airports
-					</div>
+				<div id="pagination" class="mt-8 flex items-center justify-center">
 					<div class="flex gap-2">
 						<button id="prev-page" class="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
 							Previous
@@ -183,6 +188,7 @@ const description = `Browse all airports in ${country.toUpperCase()}. Find detai
 	let currentPage = 1;
 	let totalPages = 1;
 	let isGridView = true;
+	let apiPagination = null; // Store API pagination info
 	const itemsPerPage = 20;
 
 	// DOM elements
@@ -205,11 +211,10 @@ const description = `Browse all airports in ${country.toUpperCase()}. Find detai
 	const largeAirportsEl = document.getElementById('large-airports');
 	const mediumAirportsEl = document.getElementById('medium-airports');
 	const smallAirportsEl = document.getElementById('small-airports');
+	const heliportsEl = document.getElementById('heliports');
+	const seaplaneBasesEl = document.getElementById('seaplane-bases');
 
 	// Pagination elements
-	const showingFromEl = document.getElementById('showing-from');
-	const showingToEl = document.getElementById('showing-to');
-	const showingTotalEl = document.getElementById('showing-total');
 	const prevPageBtn = document.getElementById('prev-page');
 	const nextPageBtn = document.getElementById('next-page');
 	const pageInfoEl = document.getElementById('page-info');
@@ -223,22 +228,35 @@ const description = `Browse all airports in ${country.toUpperCase()}. Find detai
 		try {
 			showLoading();
 			
-			// Load all airports without pagination limit
-			const response = await fetch(`/api/countries/${country}/airports?limit=200`);
-			if (!response.ok) {
+			// Load country stats and airports in parallel
+			const [statsResponse, airportsResponse] = await Promise.all([
+				fetch(`/api/countries/${country}/stats`),
+				fetch(`/api/countries/${country}/airports?limit=18&page=${currentPage}`)
+			]);
+			
+			if (!airportsResponse.ok) {
 				throw new Error('Failed to fetch airports');
 			}
 			
-			const data = await response.json();
-			allAirports = data.airports || [];
+			const airportsData = await airportsResponse.json();
+			allAirports = airportsData.airports || [];
 			filteredAirports = [...allAirports];
+			apiPagination = airportsData.pagination || null;
+			
+			// Load stats from API if available, otherwise calculate from airports
+			let countryStats = null;
+			if (statsResponse.ok) {
+				const statsData = await statsResponse.json();
+				countryStats = statsData.stats;
+			}
 			
 			// Update page title and description
-			const countryName = allAirports.length > 0 ? (allAirports[0].iso_country || country).toUpperCase() : country.toUpperCase();
+			const countryName = countryStats?.country_name || 
+				(allAirports.length > 0 ? (allAirports[0].iso_country || country).toUpperCase() : country.toUpperCase());
 			pageTitleEl.textContent = `Airports in ${countryName}`;
 			pageDescriptionEl.textContent = `Discover ${allAirports.length} airports in ${countryName}`;
 			
-			updateStats();
+			updateStats(countryStats);
 			sortAirports();
 			updatePagination();
 			renderAirports();
@@ -251,18 +269,37 @@ const description = `Browse all airports in ${country.toUpperCase()}. Find detai
 	}
 
 	// Update statistics
-	function updateStats() {
-		const stats = {
-			total: allAirports.length,
-			large: allAirports.filter(a => a.type === 'large_airport').length,
-			medium: allAirports.filter(a => a.type === 'medium_airport').length,
-			small: allAirports.filter(a => a.type === 'small_airport').length
-		};
+	function updateStats(countryStats = null) {
+		let stats;
+		
+		if (countryStats) {
+			// Use pre-calculated stats from country_stats table
+			stats = {
+				total: countryStats.airport_count || 0,
+				large: countryStats.large_airport_count || 0,
+				medium: countryStats.medium_airport_count || 0,
+				small: countryStats.small_airport_count || 0,
+				heliports: countryStats.heliport_count || 0,
+				seaplaneBases: countryStats.seaplane_base_count || 0
+			};
+		} else {
+			// Fallback to real-time calculation from airports data
+			stats = {
+				total: allAirports.length,
+				large: allAirports.filter(a => a.type === 'large_airport').length,
+				medium: allAirports.filter(a => a.type === 'medium_airport').length,
+				small: allAirports.filter(a => a.type === 'small_airport').length,
+				heliports: allAirports.filter(a => a.type === 'heliport').length,
+				seaplaneBases: allAirports.filter(a => a.type === 'seaplane_base').length
+			};
+		}
 		
 		totalAirportsEl.textContent = stats.total.toString();
 		largeAirportsEl.textContent = stats.large.toString();
 		mediumAirportsEl.textContent = stats.medium.toString();
 		smallAirportsEl.textContent = stats.small.toString();
+		heliportsEl.textContent = stats.heliports.toString();
+		seaplaneBasesEl.textContent = stats.seaplaneBases.toString();
 	}
 
 	// Sort airports
@@ -293,18 +330,27 @@ const description = `Browse all airports in ${country.toUpperCase()}. Find detai
 		const query = airportSearch.value.toLowerCase().trim();
 		const typeValue = typeFilter.value;
 		
-		filteredAirports = allAirports.filter(airport => {
-			// Text search
-			const matchesQuery = !query || 
-				(airport.name || '').toLowerCase().includes(query) ||
-				(airport.ident || '').toLowerCase().includes(query) ||
-				(airport.municipality || '').toLowerCase().includes(query);
-			
-			// Type filter
-			const matchesType = !typeValue || airport.type === typeValue;
-			
-			return matchesQuery && matchesType;
-		});
+		// If there's a filter, disable API pagination and use local filtering
+		if (query || typeValue) {
+			apiPagination = null; // Disable API pagination when filtering
+			filteredAirports = allAirports.filter(airport => {
+				// Text search
+				const matchesQuery = !query || 
+					(airport.name || '').toLowerCase().includes(query) ||
+					(airport.ident || '').toLowerCase().includes(query) ||
+					(airport.municipality || '').toLowerCase().includes(query);
+				
+				// Type filter
+				const matchesType = !typeValue || airport.type === typeValue;
+				
+				return matchesQuery && matchesType;
+			});
+		} else {
+			// No filter, reload from API to restore pagination
+			currentPage = 1;
+			loadAirports();
+			return;
+		}
 		
 		currentPage = 1;
 		sortAirports();
@@ -314,25 +360,39 @@ const description = `Browse all airports in ${country.toUpperCase()}. Find detai
 
 	// Update pagination
 	function updatePagination() {
-		totalPages = Math.ceil(filteredAirports.length / itemsPerPage);
-		const startIndex = (currentPage - 1) * itemsPerPage;
-		const endIndex = Math.min(startIndex + itemsPerPage, filteredAirports.length);
-		
-		showingFromEl.textContent = filteredAirports.length > 0 ? (startIndex + 1).toString() : '0';
-		showingToEl.textContent = endIndex.toString();
-		showingTotalEl.textContent = filteredAirports.length.toString();
-		
-		pageInfoEl.textContent = `Page ${currentPage} of ${totalPages}`;
-		
-		prevPageBtn.disabled = currentPage <= 1;
-		nextPageBtn.disabled = currentPage >= totalPages;
+		if (apiPagination) {
+			// Use API pagination info
+			currentPage = apiPagination.current_page || 1;
+			totalPages = apiPagination.total_pages || 1;
+			
+			pageInfoEl.textContent = `Page ${currentPage} of ${totalPages}`;
+			
+			prevPageBtn.disabled = !apiPagination.has_prev;
+			nextPageBtn.disabled = !apiPagination.has_next;
+		} else {
+			// Fallback to local calculation
+			totalPages = Math.ceil(filteredAirports.length / itemsPerPage) || 1;
+			
+			pageInfoEl.textContent = `Page ${currentPage} of ${totalPages}`;
+			
+			prevPageBtn.disabled = currentPage <= 1;
+			nextPageBtn.disabled = currentPage >= totalPages;
+		}
 	}
 
 	// Render airports
 	function renderAirports() {
-		const startIndex = (currentPage - 1) * itemsPerPage;
-		const endIndex = startIndex + itemsPerPage;
-		const pageAirports = filteredAirports.slice(startIndex, endIndex);
+		let pageAirports;
+		
+		if (apiPagination) {
+			// When using API pagination, show all airports from current API response
+			pageAirports = filteredAirports;
+		} else {
+			// When using local pagination, slice the data
+			const startIndex = (currentPage - 1) * itemsPerPage;
+			const endIndex = startIndex + itemsPerPage;
+			pageAirports = filteredAirports.slice(startIndex, endIndex);
+		}
 		
 		if (isGridView) {
 			renderGrid(pageAirports);
@@ -362,7 +422,7 @@ const description = `Browse all airports in ${country.toUpperCase()}. Find detai
 	// Render grid view
 	function renderGrid(airports) {
 		airportsGrid.innerHTML = airports.map(airport => `
-			<div class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6">
+			<div class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6 flex flex-col h-full">
 				<div class="flex items-start justify-between mb-4">
 					<div class="flex-1">
 						<h3 class="text-lg font-semibold text-gray-900 mb-1">${airport.name || airport.ident}</h3>
@@ -373,7 +433,7 @@ const description = `Browse all airports in ${country.toUpperCase()}. Find detai
 						${getTypeBadge(airport.type)}
 					</div>
 				</div>
-				<div class="space-y-2 mb-4">
+				<div class="space-y-2 mb-4 flex-grow">
 					${airport.latitude_deg && airport.longitude_deg ? `
 						<div class="text-sm text-gray-600">
 							📍 ${airport.latitude_deg.toFixed(4)}, ${airport.longitude_deg.toFixed(4)}
@@ -385,7 +445,7 @@ const description = `Browse all airports in ${country.toUpperCase()}. Find detai
 						</div>
 					` : ''}
 				</div>
-				<div class="flex gap-2">
+				<div class="flex gap-2 mt-auto">
 					<a href="/airports/${airport.ident}" class="flex-1 bg-blue-600 text-white text-center py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
 						View Details
 					</a>
@@ -471,16 +531,22 @@ const description = `Browse all airports in ${country.toUpperCase()}. Find detai
 	retryBtn.addEventListener('click', loadAirports);
 
 	// Pagination event listeners
-	prevPageBtn.addEventListener('click', () => {
-		if (currentPage > 1) {
+	prevPageBtn.addEventListener('click', async () => {
+		if (apiPagination && apiPagination.has_prev) {
+			currentPage--;
+			await loadAirports();
+		} else if (!apiPagination && currentPage > 1) {
 			currentPage--;
 			updatePagination();
 			renderAirports();
 		}
 	});
 
-	nextPageBtn.addEventListener('click', () => {
-		if (currentPage < totalPages) {
+	nextPageBtn.addEventListener('click', async () => {
+		if (apiPagination && apiPagination.has_next) {
+			currentPage++;
+			await loadAirports();
+		} else if (!apiPagination && currentPage < totalPages) {
 			currentPage++;
 			updatePagination();
 			renderAirports();

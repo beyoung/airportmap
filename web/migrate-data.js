@@ -8,7 +8,7 @@ import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 
-const AIRPORTS_DB_PATH = '../airports.db';
+const AIRPORTS_DB_PATH = '../pipeline/airports.db';
 const OUTPUT_FILE = './data-export.sql';
 
 function exportData() {
@@ -26,6 +26,10 @@ function exportData() {
     const airports = db.prepare('SELECT * FROM airport ORDER BY id').all();
     console.log(`Found ${airports.length} airport records`);
     
+    // Get all country stats
+    const countryStats = db.prepare('SELECT * FROM country_stats ORDER BY country_code').all();
+    console.log(`Found ${countryStats.length} country_stats records`);
+    
     // Generate SQL export
     let sqlOutput = '-- Data export from airports.db to Cloudflare D1\n\n';
     
@@ -42,6 +46,24 @@ function exportData() {
       ];
       
       sqlOutput += `INSERT INTO address (id, country, region, municipality, country_name, region_name) VALUES (${values.join(', ')});\n`;
+    }
+    
+    sqlOutput += '\n-- Insert country_stats data\n';
+    for (const stats of countryStats) {
+      const values = [
+        escapeString(stats.country_code),
+        escapeString(stats.country_name),
+        stats.airport_count || 0,
+        stats.large_airport_count || 0,
+        stats.medium_airport_count || 0,
+        stats.small_airport_count || 0,
+        stats.heliport_count || 0,
+        stats.seaplane_base_count || 0,
+        stats.other_count || 0,
+        escapeString(stats.last_updated)
+      ];
+      
+      sqlOutput += `INSERT INTO country_stats (country_code, country_name, airport_count, large_airport_count, medium_airport_count, small_airport_count, heliport_count, seaplane_base_count, other_count, last_updated) VALUES (${values.join(', ')});\n`;
     }
     
     sqlOutput += '\n-- Insert airport data\n';

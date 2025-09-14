@@ -55,6 +55,12 @@ export interface CountryStats {
   country: string;
   country_name: string | null;
   airport_count: number;
+  large_airport_count?: number;
+  medium_airport_count?: number;
+  small_airport_count?: number;
+  heliport_count?: number;
+  seaplane_base_count?: number;
+  other_count?: number;
 }
 
 /**
@@ -229,7 +235,7 @@ export class AirportDatabase {
   /**
    * Get airports by country
    */
-  async getAirportsByCountry(country: string, limit = 100): Promise<AirportWithAddress[]> {
+  async getAirportsByCountry(country: string, limit = 10000): Promise<AirportWithAddress[]> {
     const query = `
       SELECT 
         a.*,
@@ -283,24 +289,69 @@ export class AirportDatabase {
   async getCountryStats(): Promise<CountryStats[]> {
     const query = `
       SELECT 
-        a.iso_country as country,
-        addr.country_name,
-        COUNT(*) as airport_count
-      FROM airport a
-      LEFT JOIN address addr ON a.address_id = addr.id
-      WHERE a.iso_country IS NOT NULL
-      GROUP BY a.iso_country, addr.country_name
+        country_code as country,
+        country_name,
+        airport_count,
+        large_airport_count,
+        medium_airport_count,
+        small_airport_count,
+        heliport_count,
+        seaplane_base_count,
+        other_count
+      FROM country_stats
       ORDER BY airport_count DESC
-      LIMIT 50
     `;
     
     const results = await this.db.prepare(query).all();
-    
     return results.results?.map((row: any) => ({
       country: row.country,
       country_name: row.country_name,
-      airport_count: row.airport_count
+      airport_count: row.airport_count,
+      large_airport_count: row.large_airport_count || 0,
+      medium_airport_count: row.medium_airport_count || 0,
+      small_airport_count: row.small_airport_count || 0,
+      heliport_count: row.heliport_count || 0,
+      seaplane_base_count: row.seaplane_base_count || 0,
+      other_count: row.other_count || 0
     })) || [];
+  }
+
+  /**
+   * Get statistics for a specific country
+   */
+  async getCountryStatsByCode(countryCode: string): Promise<CountryStats | null> {
+    const query = `
+      SELECT 
+        country_code as country,
+        country_name,
+        airport_count,
+        large_airport_count,
+        medium_airport_count,
+        small_airport_count,
+        heliport_count,
+        seaplane_base_count,
+        other_count
+      FROM country_stats
+      WHERE country_code = ?
+    `;
+    
+    const result = await this.db.prepare(query).bind(countryCode.toUpperCase()).first();
+    
+    if (!result) {
+      return null;
+    }
+    
+    return {
+      country: result.country,
+      country_name: result.country_name,
+      airport_count: result.airport_count,
+      large_airport_count: result.large_airport_count || 0,
+      medium_airport_count: result.medium_airport_count || 0,
+      small_airport_count: result.small_airport_count || 0,
+      heliport_count: result.heliport_count || 0,
+      seaplane_base_count: result.seaplane_base_count || 0,
+      other_count: result.other_count || 0
+    };
   }
 
   /**
