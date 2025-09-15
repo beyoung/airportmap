@@ -1,0 +1,79 @@
+---
+export interface Props {
+  latitude: number;
+  longitude: number;
+  name: string;
+  ident: string;
+  municipality?: string;
+  iso_country?: string;
+}
+
+const { latitude, longitude, name, ident, municipality, iso_country } = Astro.props;
+---
+
+<div 
+  id="mini-map" 
+  class="h-64 bg-gray-100 rounded-lg relative overflow-hidden"
+  data-latitude={latitude}
+  data-longitude={longitude}
+  data-name={name}
+  data-ident={ident}
+  data-municipality={municipality}
+  data-iso-country={iso_country}
+>
+  <div id="mini-map-loading" class="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
+    <div class="text-center">
+      <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mb-2"></div>
+      <p class="text-gray-500 text-sm">Loading map...</p>
+    </div>
+  </div>
+  
+  <!-- Fullscreen button -->
+  <button 
+    id="fullscreen-btn" 
+    class="absolute top-2 right-2 z-20 bg-white hover:bg-gray-50 border border-gray-300 rounded p-2 shadow-sm transition-colors"
+    title="全屏显示地图"
+  >
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+    </svg>
+  </button>
+</div>
+
+<script>
+  import { initMiniMap } from '../scripts/minimap.ts';
+  
+  // Get data from the element's data attributes
+  const mapContainer = document.getElementById('mini-map');
+  if (mapContainer) {
+    const props = {
+      latitude: parseFloat(mapContainer.dataset.latitude || '0'),
+      longitude: parseFloat(mapContainer.dataset.longitude || '0'),
+      name: mapContainer.dataset.name || '',
+      ident: mapContainer.dataset.ident || '',
+      municipality: mapContainer.dataset.municipality || '',
+      iso_country: mapContainer.dataset.isoCountry || ''
+    };
+    
+    const mapInstance = initMiniMap(props);
+    
+    // Handle custom fullscreen button click
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    if (fullscreenBtn && mapInstance) {
+      fullscreenBtn.addEventListener('click', () => {
+        // Trigger the built-in fullscreen control
+        const fullscreenControl = mapInstance.getContainer().querySelector('.maplibregl-ctrl-fullscreen') as HTMLElement;
+        if (fullscreenControl) {
+          fullscreenControl.click();
+        }
+      });
+    }
+  }
+</script>
+
+<style>
+  #mini-map {
+    width: 100%;
+    height: 16rem;
+  }
+</style>

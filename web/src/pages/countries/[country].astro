@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import { AirportDatabase } from '../../lib/database';
 
 // Get country from URL params
 const { country } = Astro.params;
@@ -8,8 +9,132 @@ if (!country) {
   return Astro.redirect('/countries');
 }
 
-const title = `Airports in ${country.toUpperCase()} - AyaMap Airports`;
-const description = `Browse all airports in ${country.toUpperCase()}. Find detailed information about aviation infrastructure.`;
+// Get URL parameters for pagination and filtering
+const url = Astro.url;
+const page = parseInt(url.searchParams.get('page') || '1');
+const query = url.searchParams.get('q') || '';
+const type = url.searchParams.get('type') || '';
+const sort = url.searchParams.get('sort') || 'name';
+const limit = 18;
+
+// Get database from Astro locals
+const dbInstance = (Astro.locals as any).runtime?.env?.DB || (Astro.locals as any).DB;
+
+if (!dbInstance) {
+  throw new Error('Database not available');
+}
+
+// Create database instance
+const db = new AirportDatabase(dbInstance);
+
+// Get country stats and airports data
+let countryStats: any = null;
+let airports: any[] = [];
+let pagination: any = null;
+let countryName = country.toUpperCase();
+
+try {
+  // Get country statistics
+  countryStats = await db.getCountryStatsByCode(country.toUpperCase());
+  
+  // Get all airports for the country
+  const allAirports = await db.getAirportsByCountry(country.toUpperCase());
+  
+  // Apply filtering
+  let filteredAirports = allAirports;
+  
+  if (query) {
+    filteredAirports = filteredAirports.filter(airport => 
+      (airport.name || '').toLowerCase().includes(query.toLowerCase()) ||
+      (airport.ident || '').toLowerCase().includes(query.toLowerCase()) ||
+      (airport.municipality || '').toLowerCase().includes(query.toLowerCase())
+    );
+  }
+  
+  if (type) {
+    filteredAirports = filteredAirports.filter(airport => airport.type === type);
+  }
+  
+  // Apply sorting
+  filteredAirports.sort((a, b) => {
+    switch (sort) {
+      case 'type':
+        const typeOrder = { 'large_airport': 1, 'medium_airport': 2, 'small_airport': 3 };
+        const aType = typeOrder[a.type as keyof typeof typeOrder] || 999;
+        const bType = typeOrder[b.type as keyof typeof typeOrder] || 999;
+        return aType - bType;
+      case 'municipality':
+        const aMuni = a.municipality || '';
+        const bMuni = b.municipality || '';
+        return aMuni.localeCompare(bMuni);
+      default: // name
+        const aName = a.name || a.ident || '';
+        const bName = b.name || b.ident || '';
+        return aName.localeCompare(bName);
+    }
+  });
+  
+  // Apply pagination
+  const total = filteredAirports.length;
+  const totalPages = Math.ceil(total / limit) || 1;
+  const startIndex = (page - 1) * limit;
+  const endIndex = startIndex + limit;
+  
+  airports = filteredAirports.slice(startIndex, endIndex);
+  
+  pagination = {
+    current_page: page,
+    total_pages: totalPages,
+    total_items: total,
+    has_prev: page > 1,
+    has_next: page < totalPages,
+    limit
+  };
+  
+  // Get country name from stats or first airport
+  if (countryStats?.country_name) {
+    countryName = countryStats.country_name;
+  } else if (airports.length > 0 && airports[0].iso_country) {
+    countryName = airports[0].iso_country;
+  }
+} catch (error) {
+  console.error('Error fetching data:', error);
+}
+
+// Helper function to build URL with parameters
+function buildUrl(params: Record<string, string | number>) {
+  const searchParams = new URLSearchParams();
+  
+  Object.entries(params).forEach(([key, value]) => {
+    if (value && value !== '' && value !== 1) {
+      searchParams.set(key, value.toString());
+    }
+  });
+  
+  const queryString = searchParams.toString();
+  return `/countries/${country}${queryString ? '?' + queryString : ''}`;
+}
+
+// Helper function for type badges
+function getTypeBadge(type: string | null) {
+  switch (type) {
+    case 'large_airport':
+      return '<span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded">Large</span>';
+    case 'medium_airport':
+      return '<span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded">Medium</span>';
+    case 'small_airport':
+      return '<span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">Small</span>';
+    case 'heliport':
+      return '<span class="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded">Heliport</span>';
+    case 'seaplane_base':
+      return '<span class="bg-cyan-100 text-cyan-800 text-xs font-medium px-2.5 py-0.5 rounded">Seaplane</span>';
+    default:
+      return '<span class="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded">Other</span>';
+  }
+}
+
+const title = `Airports in ${countryName} - AyaMap Airports`;
+const description = `Browse all airports in ${countryName}. Find detailed information about aviation infrastructure.`;
 ---
 
 <Layout title={title}>
@@ -26,20 +151,12 @@ const description = `Browse all airports in ${country.toUpperCase()}. Find detai
 							<span>/</span>
 							<span id="country-code" class="font-medium text-gray-900">{country.toUpperCase()}</span>
 						</nav>
-						<h1 id="page-title" class="text-4xl font-bold text-gray-900 mb-2">
-							Airports in {country.toUpperCase()}
+						<h1 class="text-4xl font-bold text-gray-900 mb-2">
+							Airports in {countryName}
 						</h1>
-						<p id="page-description" class="text-xl text-gray-600">
-							Loading airport information...
+						<p class="text-xl text-gray-600">
+							Discover {pagination?.total_items || 0} airports in {countryName}
 						</p>
-					</div>
-					<div class="flex gap-3">
-						<a href="/countries" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
-							← Back to Countries
-						</a>
-						<button id="view-on-map" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-							🗺️ View on Map
-						</button>
 					</div>
 				</div>
 			</div>
@@ -48,77 +165,72 @@ const description = `Browse all airports in ${country.toUpperCase()}. Find detai
 		<!-- Search and Filter Section -->
 		<section class="bg-white border-b border-gray-200">
 			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-				<div class="flex flex-col lg:flex-row gap-4 items-center justify-between">
+				<form method="GET" class="flex flex-col lg:flex-row gap-4 items-center justify-between">
 					<div class="flex flex-col sm:flex-row gap-4 flex-1">
 						<div class="flex-1 max-w-md">
 							<input 
+								id="airport-search"
 								type="text" 
-								id="airport-search" 
+								name="q"
+								value={query}
 								placeholder="Search airports..."
 								class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
 							/>
 						</div>
-						<select id="type-filter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-							<option value="">All Types</option>
-							<option value="large_airport">Large Airport</option>
-							<option value="medium_airport">Medium Airport</option>
-							<option value="small_airport">Small Airport</option>
-							<option value="heliport">Heliport</option>
-							<option value="seaplane_base">Seaplane Base</option>
+						<select id="type-filter" name="type" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+							<option value="" selected={type === ''}>All Types</option>
+							<option value="large_airport" selected={type === 'large_airport'}>Large Airport</option>
+							<option value="medium_airport" selected={type === 'medium_airport'}>Medium Airport</option>
+							<option value="small_airport" selected={type === 'small_airport'}>Small Airport</option>
+							<option value="heliport" selected={type === 'heliport'}>Heliport</option>
+							<option value="seaplane_base" selected={type === 'seaplane_base'}>Seaplane Base</option>
 						</select>
 					</div>
 					<div class="flex gap-2">
-						<select id="sort-select" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-							<option value="name">Sort by Name</option>
-							<option value="type">Sort by Type</option>
-							<option value="municipality">Sort by City</option>
+						<select id="sort-select" name="sort" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+							<option value="name" selected={sort === 'name'}>Sort by Name</option>
+							<option value="type" selected={sort === 'type'}>Sort by Type</option>
+							<option value="municipality" selected={sort === 'municipality'}>Sort by City</option>
 						</select>
-						<button id="view-toggle" class="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors">
+						<button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+							Search
+						</button>
+						<button type="button" id="view-toggle" class="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors">
 							<span id="view-icon">📋</span>
 						</button>
 					</div>
-				</div>
-			</div>
-		</section>
-
-		<!-- Loading State -->
-		<section id="loading-section" class="py-12">
-			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-				<div class="text-center">
-					<div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-					<p class="text-gray-600">Loading airports...</p>
-				</div>
+				</form>
 			</div>
 		</section>
 
 		<!-- Airports Section -->
-		<section id="airports-section" class="hidden py-8">
+		<section class="py-8">
 			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 				<!-- Stats Summary -->
-				<div id="stats-summary" class="bg-white rounded-lg shadow-sm p-6 mb-8">
+				<div class="bg-white rounded-lg shadow-sm p-6 mb-8">
 					<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 text-center">
 						<div>
-							<div id="total-airports" class="text-3xl font-bold text-blue-600">-</div>
+							<div class="text-3xl font-bold text-blue-600">{countryStats?.airport_count || 0}</div>
 							<div class="text-gray-600">Total Airports</div>
 						</div>
 						<div>
-							<div id="large-airports" class="text-3xl font-bold text-green-600">-</div>
+							<div class="text-3xl font-bold text-green-600">{countryStats?.large_airport_count || 0}</div>
 							<div class="text-gray-600">Large Airports</div>
 						</div>
 						<div>
-							<div id="medium-airports" class="text-3xl font-bold text-yellow-600">-</div>
+							<div class="text-3xl font-bold text-yellow-600">{countryStats?.medium_airport_count || 0}</div>
 							<div class="text-gray-600">Medium Airports</div>
 						</div>
 						<div>
-							<div id="small-airports" class="text-3xl font-bold text-purple-600">-</div>
+							<div class="text-3xl font-bold text-purple-600">{countryStats?.small_airport_count || 0}</div>
 							<div class="text-gray-600">Small Airports</div>
 						</div>
 						<div>
-							<div id="heliports" class="text-3xl font-bold text-orange-600">-</div>
+							<div class="text-3xl font-bold text-orange-600">{countryStats?.heliport_count || 0}</div>
 							<div class="text-gray-600">Heliports</div>
 						</div>
 						<div>
-							<div id="seaplane-bases" class="text-3xl font-bold text-cyan-600">-</div>
+							<div class="text-3xl font-bold text-cyan-600">{countryStats?.seaplane_base_count || 0}</div>
 							<div class="text-gray-600">Seaplane Bases</div>
 						</div>
 					</div>
@@ -126,7 +238,42 @@ const description = `Browse all airports in ${country.toUpperCase()}. Find detai
 
 				<!-- Airports Grid -->
 				<div id="airports-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-					<!-- Airports will be populated here -->
+					{airports.map(airport => (
+						<div class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6 flex flex-col h-full">
+							<div class="flex items-start justify-between mb-4">
+								<div class="flex-1">
+									<h3 class="text-lg font-semibold text-gray-900 mb-1">{airport.name || airport.ident}</h3>
+									<p class="text-sm text-gray-600">{airport.municipality || 'Unknown City'}</p>
+								</div>
+								<div class="flex flex-col items-end gap-2">
+									<span class="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded">{airport.ident}</span>
+									<Fragment set:html={getTypeBadge(airport.type)} />
+								</div>
+							</div>
+							<div class="space-y-2 mb-4 flex-grow">
+								{airport.latitude_deg && airport.longitude_deg && (
+									<div class="text-sm text-gray-600">
+										📍 {airport.latitude_deg.toFixed(4)}, {airport.longitude_deg.toFixed(4)}
+									</div>
+								)}
+								{airport.elevation_ft && (
+									<div class="text-sm text-gray-600">
+										⛰️ {airport.elevation_ft} ft elevation
+									</div>
+								)}
+							</div>
+							<div class="flex gap-2 mt-auto">
+								<a href={`/airports/${airport.ident}`} class="flex-1 bg-blue-600 text-white text-center py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+									View Details
+								</a>
+								{airport.home_link && (
+									<a href={airport.home_link} target="_blank" class="bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
+										🔗
+									</a>
+								)}
+							</div>
+						</div>
+					))}
 				</div>
 
 				<!-- Airports Table (Alternative View) -->
@@ -141,24 +288,58 @@ const description = `Browse all airports in ${country.toUpperCase()}. Find detai
 								<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
 							</tr>
 						</thead>
-						<tbody id="airports-table-body" class="bg-white divide-y divide-gray-200">
-							<!-- Table rows will be populated here -->
+						<tbody class="bg-white divide-y divide-gray-200">
+							{airports.map(airport => (
+								<tr class="hover:bg-gray-50">
+									<td class="px-6 py-4 whitespace-nowrap">
+										<div class="text-sm font-medium text-gray-900">{airport.name || airport.ident}</div>
+										<div class="text-sm text-gray-500">{airport.municipality || 'Unknown City'}</div>
+									</td>
+									<td class="px-6 py-4 whitespace-nowrap">
+										<span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">{airport.ident}</span>
+									</td>
+									<td class="px-6 py-4 whitespace-nowrap">
+										<Fragment set:html={getTypeBadge(airport.type)} />
+									</td>
+									<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+										{airport.municipality || '-'}
+									</td>
+									<td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+										<a href={`/airports/${airport.ident}`} class="text-blue-600 hover:text-blue-900 mr-3">Details</a>
+										{airport.home_link && <a href={airport.home_link} target="_blank" class="text-gray-600 hover:text-gray-900">🔗</a>}
+									</td>
+								</tr>
+							))}
 						</tbody>
 					</table>
 				</div>
 
 				<!-- Pagination -->
-				<div id="pagination" class="mt-8 flex items-center justify-center">
-					<div class="flex gap-2">
-						<button id="prev-page" class="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-							Previous
-						</button>
-						<span id="page-info" class="px-3 py-2 text-sm text-gray-700">Page 1</span>
-						<button id="next-page" class="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-							Next
-						</button>
+				{pagination && pagination.total_pages > 1 && (
+					<div class="mt-8 flex items-center justify-between">
+						<div class="text-sm text-gray-700">
+							Showing {((pagination.current_page - 1) * pagination.per_page) + 1} to {Math.min(pagination.current_page * pagination.per_page, pagination.total_items)} of {pagination.total_items} results
+						</div>
+						<div class="flex items-center space-x-2">
+							{pagination.current_page > 1 && (
+								<a href={buildUrl({ page: pagination.current_page - 1 })} class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+									Previous
+								</a>
+							)}
+							
+							<span class="px-3 py-2 text-sm font-medium bg-blue-600 text-white rounded-md">
+								{pagination.current_page}
+							</span>
+							<span class="px-3 py-2 text-sm text-gray-500">of {pagination.total_pages}</span>
+							
+							{pagination.current_page < pagination.total_pages && (
+								<a href={buildUrl({ page: pagination.current_page + 1 })} class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+									Next
+								</a>
+							)}
+						</div>
 					</div>
-				</div>
+				)}
 			</div>
 		</section>
 
@@ -179,385 +360,40 @@ const description = `Browse all airports in ${country.toUpperCase()}. Find detai
 </Layout>
 
 <script define:vars={{ country }}>
-	// Airport data structure (for reference)
-	// Each airport object contains: id, ident, type, name, latitude_deg, longitude_deg,
-	// elevation_ft, iso_country, iso_region, municipality, home_link, wikipedia_link, keywords
+	// Simple client-side functionality for view toggle
+	document.addEventListener('DOMContentLoaded', () => {
+		// View toggle functionality
+		const viewToggle = document.getElementById('view-toggle');
+		const viewOnMapBtn = document.getElementById('view-on-map');
 
-	let allAirports = [];
-	let filteredAirports = [];
-	let currentPage = 1;
-	let totalPages = 1;
-	let isGridView = true;
-	let apiPagination = null; // Store API pagination info
-	const itemsPerPage = 20;
-
-	// DOM elements
-	const loadingSection = document.getElementById('loading-section');
-	const airportsSection = document.getElementById('airports-section');
-	const errorSection = document.getElementById('error-section');
-	const airportsGrid = document.getElementById('airports-grid');
-	const airportsTable = document.getElementById('airports-table');
-	const airportsTableBody = document.getElementById('airports-table-body');
-	const airportSearch = document.getElementById('airport-search');
-	const typeFilter = document.getElementById('type-filter');
-	const sortSelect = document.getElementById('sort-select');
-	const viewToggle = document.getElementById('view-toggle');
-	const viewIcon = document.getElementById('view-icon');
-	const retryBtn = document.getElementById('retry-btn');
-	const viewOnMapBtn = document.getElementById('view-on-map');
-
-	// Stats elements
-	const totalAirportsEl = document.getElementById('total-airports');
-	const largeAirportsEl = document.getElementById('large-airports');
-	const mediumAirportsEl = document.getElementById('medium-airports');
-	const smallAirportsEl = document.getElementById('small-airports');
-	const heliportsEl = document.getElementById('heliports');
-	const seaplaneBasesEl = document.getElementById('seaplane-bases');
-
-	// Pagination elements
-	const prevPageBtn = document.getElementById('prev-page');
-	const nextPageBtn = document.getElementById('next-page');
-	const pageInfoEl = document.getElementById('page-info');
-
-	// Page elements
-	const pageTitleEl = document.getElementById('page-title');
-	const pageDescriptionEl = document.getElementById('page-description');
-
-	// Load airports data
-	async function loadAirports() {
-		try {
-			showLoading();
-			
-			// Load country stats and airports in parallel
-			const [statsResponse, airportsResponse] = await Promise.all([
-				fetch(`/api/countries/${country}/stats`),
-				fetch(`/api/countries/${country}/airports?limit=18&page=${currentPage}`)
-			]);
-			
-			if (!airportsResponse.ok) {
-				throw new Error('Failed to fetch airports');
-			}
-			
-			const airportsData = await airportsResponse.json();
-			allAirports = airportsData.airports || [];
-			filteredAirports = [...allAirports];
-			apiPagination = airportsData.pagination || null;
-			
-			// Load stats from API if available, otherwise calculate from airports
-			let countryStats = null;
-			if (statsResponse.ok) {
-				const statsData = await statsResponse.json();
-				countryStats = statsData.stats;
-			}
-			
-			// Update page title and description
-			const countryName = countryStats?.country_name || 
-				(allAirports.length > 0 ? (allAirports[0].iso_country || country).toUpperCase() : country.toUpperCase());
-			pageTitleEl.textContent = `Airports in ${countryName}`;
-			pageDescriptionEl.textContent = `Discover ${allAirports.length} airports in ${countryName}`;
-			
-			updateStats(countryStats);
-			sortAirports();
-			updatePagination();
-			renderAirports();
-			showAirports();
-			
-		} catch (error) {
-			console.error('Error loading airports:', error);
-			showError();
+		if (viewToggle) {
+			viewToggle.addEventListener('click', toggleView);
 		}
-	}
 
-	// Update statistics
-	function updateStats(countryStats = null) {
-		let stats;
-		
-		if (countryStats) {
-			// Use pre-calculated stats from country_stats table
-			stats = {
-				total: countryStats.airport_count || 0,
-				large: countryStats.large_airport_count || 0,
-				medium: countryStats.medium_airport_count || 0,
-				small: countryStats.small_airport_count || 0,
-				heliports: countryStats.heliport_count || 0,
-				seaplaneBases: countryStats.seaplane_base_count || 0
-			};
-		} else {
-			// Fallback to real-time calculation from airports data
-			stats = {
-				total: allAirports.length,
-				large: allAirports.filter(a => a.type === 'large_airport').length,
-				medium: allAirports.filter(a => a.type === 'medium_airport').length,
-				small: allAirports.filter(a => a.type === 'small_airport').length,
-				heliports: allAirports.filter(a => a.type === 'heliport').length,
-				seaplaneBases: allAirports.filter(a => a.type === 'seaplane_base').length
-			};
-		}
-		
-		totalAirportsEl.textContent = stats.total.toString();
-		largeAirportsEl.textContent = stats.large.toString();
-		mediumAirportsEl.textContent = stats.medium.toString();
-		smallAirportsEl.textContent = stats.small.toString();
-		heliportsEl.textContent = stats.heliports.toString();
-		seaplaneBasesEl.textContent = stats.seaplaneBases.toString();
-	}
-
-	// Sort airports
-	function sortAirports() {
-		const sortBy = sortSelect.value;
-		
-		filteredAirports.sort((a, b) => {
-			switch (sortBy) {
-				case 'type':
-					const typeOrder = { 'large_airport': 1, 'medium_airport': 2, 'small_airport': 3 };
-				const aType = typeOrder[a.type || ''] || 999;
-				const bType = typeOrder[b.type || ''] || 999;
-					return aType - bType;
-				case 'municipality':
-					const aMuni = a.municipality || '';
-					const bMuni = b.municipality || '';
-					return aMuni.localeCompare(bMuni);
-				default: // name
-					const aName = a.name || a.ident || '';
-					const bName = b.name || b.ident || '';
-					return aName.localeCompare(bName);
-			}
-		});
-	}
-
-	// Filter airports
-	function filterAirports() {
-		const query = airportSearch.value.toLowerCase().trim();
-		const typeValue = typeFilter.value;
-		
-		// If there's a filter, disable API pagination and use local filtering
-		if (query || typeValue) {
-			apiPagination = null; // Disable API pagination when filtering
-			filteredAirports = allAirports.filter(airport => {
-				// Text search
-				const matchesQuery = !query || 
-					(airport.name || '').toLowerCase().includes(query) ||
-					(airport.ident || '').toLowerCase().includes(query) ||
-					(airport.municipality || '').toLowerCase().includes(query);
-				
-				// Type filter
-				const matchesType = !typeValue || airport.type === typeValue;
-				
-				return matchesQuery && matchesType;
+		if (viewOnMapBtn) {
+			viewOnMapBtn.addEventListener('click', () => {
+				window.location.href = `/?country=${country}`;
 			});
-		} else {
-			// No filter, reload from API to restore pagination
-			currentPage = 1;
-			loadAirports();
-			return;
 		}
-		
-		currentPage = 1;
-		sortAirports();
-		updatePagination();
-		renderAirports();
-	}
+	});
 
-	// Update pagination
-	function updatePagination() {
-		if (apiPagination) {
-			// Use API pagination info
-			currentPage = apiPagination.current_page || 1;
-			totalPages = apiPagination.total_pages || 1;
-			
-			pageInfoEl.textContent = `Page ${currentPage} of ${totalPages}`;
-			
-			prevPageBtn.disabled = !apiPagination.has_prev;
-			nextPageBtn.disabled = !apiPagination.has_next;
-		} else {
-			// Fallback to local calculation
-			totalPages = Math.ceil(filteredAirports.length / itemsPerPage) || 1;
-			
-			pageInfoEl.textContent = `Page ${currentPage} of ${totalPages}`;
-			
-			prevPageBtn.disabled = currentPage <= 1;
-			nextPageBtn.disabled = currentPage >= totalPages;
-		}
-	}
-
-	// Render airports
-	function renderAirports() {
-		let pageAirports;
-		
-		if (apiPagination) {
-			// When using API pagination, show all airports from current API response
-			pageAirports = filteredAirports;
-		} else {
-			// When using local pagination, slice the data
-			const startIndex = (currentPage - 1) * itemsPerPage;
-			const endIndex = startIndex + itemsPerPage;
-			pageAirports = filteredAirports.slice(startIndex, endIndex);
-		}
-		
-		if (isGridView) {
-			renderGrid(pageAirports);
-		} else {
-			renderTable(pageAirports);
-		}
-	}
-
-	// Get airport type badge
-	function getTypeBadge(type) {
-		switch (type) {
-			case 'large_airport':
-				return '<span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded">Large</span>';
-			case 'medium_airport':
-				return '<span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded">Medium</span>';
-			case 'small_airport':
-				return '<span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">Small</span>';
-			case 'heliport':
-				return '<span class="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded">Heliport</span>';
-			case 'seaplane_base':
-				return '<span class="bg-cyan-100 text-cyan-800 text-xs font-medium px-2.5 py-0.5 rounded">Seaplane</span>';
-			default:
-				return '<span class="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded">Other</span>';
-		}
-	}
-
-	// Render grid view
-	function renderGrid(airports) {
-		airportsGrid.innerHTML = airports.map(airport => `
-			<div class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6 flex flex-col h-full">
-				<div class="flex items-start justify-between mb-4">
-					<div class="flex-1">
-						<h3 class="text-lg font-semibold text-gray-900 mb-1">${airport.name || airport.ident}</h3>
-						<p class="text-sm text-gray-600">${airport.municipality || 'Unknown City'}</p>
-					</div>
-					<div class="flex flex-col items-end gap-2">
-						<span class="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded">${airport.ident}</span>
-						${getTypeBadge(airport.type)}
-					</div>
-				</div>
-				<div class="space-y-2 mb-4 flex-grow">
-					${airport.latitude_deg && airport.longitude_deg ? `
-						<div class="text-sm text-gray-600">
-							📍 ${airport.latitude_deg.toFixed(4)}, ${airport.longitude_deg.toFixed(4)}
-						</div>
-					` : ''}
-					${airport.elevation_ft ? `
-						<div class="text-sm text-gray-600">
-							⛰️ ${airport.elevation_ft} ft elevation
-						</div>
-					` : ''}
-				</div>
-				<div class="flex gap-2 mt-auto">
-					<a href="/airports/${airport.ident}" class="flex-1 bg-blue-600 text-white text-center py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
-						View Details
-					</a>
-					${airport.home_link ? `
-						<a href="${airport.home_link}" target="_blank" class="bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
-							🔗
-						</a>
-					` : ''}
-				</div>
-			</div>
-		`).join('');
-	}
-
-	// Render table view
-	function renderTable(airports) {
-		airportsTableBody.innerHTML = airports.map(airport => `
-			<tr class="hover:bg-gray-50">
-				<td class="px-6 py-4 whitespace-nowrap">
-					<div class="text-sm font-medium text-gray-900">${airport.name || airport.ident}</div>
-					<div class="text-sm text-gray-500">${airport.municipality || 'Unknown City'}</div>
-				</td>
-				<td class="px-6 py-4 whitespace-nowrap">
-					<span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">${airport.ident}</span>
-				</td>
-				<td class="px-6 py-4 whitespace-nowrap">
-					${getTypeBadge(airport.type)}
-				</td>
-				<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-					${airport.municipality || '-'}
-				</td>
-				<td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-					<a href="/airports/${airport.ident}" class="text-blue-600 hover:text-blue-900 mr-3">Details</a>
-					${airport.home_link ? `<a href="${airport.home_link}" target="_blank" class="text-gray-600 hover:text-gray-900">🔗</a>` : ''}
-				</td>
-			</tr>
-		`).join('');
-	}
-
-	// Toggle view
 	function toggleView() {
-		isGridView = !isGridView;
-		
-		if (isGridView) {
-			airportsGrid.classList.remove('hidden');
-			airportsTable.classList.add('hidden');
-			viewIcon.textContent = '📋';
-		} else {
-			airportsGrid.classList.add('hidden');
-			airportsTable.classList.remove('hidden');
-			viewIcon.textContent = '🔲';
+		const airportsGrid = document.getElementById('airports-grid');
+		const airportsTable = document.getElementById('airports-table');
+		const viewIcon = document.getElementById('view-icon');
+
+		if (airportsGrid && airportsTable && viewIcon) {
+			if (airportsGrid.classList.contains('hidden')) {
+				// Show grid, hide table
+				airportsGrid.classList.remove('hidden');
+				airportsTable.classList.add('hidden');
+				viewIcon.textContent = '📋';
+			} else {
+				// Show table, hide grid
+				airportsGrid.classList.add('hidden');
+				airportsTable.classList.remove('hidden');
+				viewIcon.textContent = '🔲';
+			}
 		}
-		
-		renderAirports();
 	}
-
-	// Show/hide sections
-	function showLoading() {
-		loadingSection.classList.remove('hidden');
-		airportsSection.classList.add('hidden');
-		errorSection.classList.add('hidden');
-	}
-
-	function showAirports() {
-		loadingSection.classList.add('hidden');
-		airportsSection.classList.remove('hidden');
-		errorSection.classList.add('hidden');
-	}
-
-	function showError() {
-		loadingSection.classList.add('hidden');
-		airportsSection.classList.add('hidden');
-		errorSection.classList.remove('hidden');
-	}
-
-	// Event listeners
-	airportSearch.addEventListener('input', filterAirports);
-	typeFilter.addEventListener('change', filterAirports);
-	sortSelect.addEventListener('change', () => {
-		sortAirports();
-		renderAirports();
-	});
-	viewToggle.addEventListener('click', toggleView);
-	retryBtn.addEventListener('click', loadAirports);
-
-	// Pagination event listeners
-	prevPageBtn.addEventListener('click', async () => {
-		if (apiPagination && apiPagination.has_prev) {
-			currentPage--;
-			await loadAirports();
-		} else if (!apiPagination && currentPage > 1) {
-			currentPage--;
-			updatePagination();
-			renderAirports();
-		}
-	});
-
-	nextPageBtn.addEventListener('click', async () => {
-		if (apiPagination && apiPagination.has_next) {
-			currentPage++;
-			await loadAirports();
-		} else if (!apiPagination && currentPage < totalPages) {
-			currentPage++;
-			updatePagination();
-			renderAirports();
-		}
-	});
-
-	// View on map button
-	viewOnMapBtn.addEventListener('click', () => {
-		window.location.href = `/?country=${country}`;
-	});
-
-	// Initialize
-	loadAirports();
 </script>
