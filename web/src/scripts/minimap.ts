@@ -27,7 +27,8 @@ export function initMiniMap(props: MiniMapProps) {
       container: miniMapContainer,
       style: {
         version: 8,
-        glyphs: "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf",
+        glyphs:
+          "https://api.maptiler.com/fonts/{fontstack}/{range}.pbf?key=48F3wFYg8K0uzswJ8cdr", // 添加字体支持
         sources: {
           "raster-tiles": {
             type: "raster",
@@ -50,7 +51,7 @@ export function initMiniMap(props: MiniMapProps) {
       },
       center: [longitude, latitude],
       zoom: 12,
-      maxZoom: 18,
+      maxZoom: 14,
       minZoom: 1,
     });
 
@@ -61,7 +62,7 @@ export function initMiniMap(props: MiniMapProps) {
       }
 
       // Add fullscreen control
-      map.addControl(new maplibregl.FullscreenControl(), 'top-right');
+      map.addControl(new maplibregl.FullscreenControl(), "top-right");
 
       // Add airport marker
       new maplibregl.Marker({
@@ -74,6 +75,8 @@ export function initMiniMap(props: MiniMapProps) {
         type: "vector",
         tiles: ["https://tiles.ayamap.com/airport/{z}/{x}/{y}.mvt"],
         attribution: "© RadiosMap",
+        minzoom: 0,
+        maxzoom: 4, // 与PMTiles数据的maxzoom保持一致
       });
 
       // Add airport points layer
@@ -89,7 +92,51 @@ export function initMiniMap(props: MiniMapProps) {
           "circle-stroke-color": "#08ff18",
         },
         minzoom: 0,
-        maxzoom: 18,
+        maxzoom: 14,
+      });
+
+      // Add airport points layer
+      map.addLayer({
+        id: "airports-points",
+        type: "circle",
+        source: "airports",
+        "source-layer": "airports",
+        paint: {
+          "circle-color": "#08ff18",
+          "circle-radius": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            0,
+            0.5, // 在缩放级别0时，圆点半径为1
+            2,
+            0.6, // 在缩放级别2时，圆点半径为2
+            4,
+            0.8, // 在缩放级别4时，圆点半径为4
+            8,
+            1.2, // 在缩放级别8时，圆点半径为6
+            12,
+            1.6, // 在缩放级别12时，圆点半径为8
+          ],
+          "circle-stroke-width": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            0,
+            0.5, // 在缩放级别0时，边框宽度为1
+            2,
+            0.6, // 在缩放级别2时，边框宽度为2
+            4,
+            0.8, // 在缩放级别4时，边框宽度为3
+            8,
+            1.2, // 在缩放级别8时，边框宽度为4
+            12,
+            1.6, // 在缩放级别12时，边框宽度为5
+          ],
+          "circle-stroke-color": "#08ff18",
+        },
+        minzoom: 0,
+        maxzoom: 14, // 允许图层在更高缩放级别显示，使用最后一级的瓦片数据
       });
 
       // Add airport labels layer
@@ -99,21 +146,45 @@ export function initMiniMap(props: MiniMapProps) {
         source: "airports",
         "source-layer": "airports",
         layout: {
-          "text-field": ["get", "ident"],
-          "text-font": ["Noto Sans Regular"],
-          "text-size": 12,
-          "text-offset": [0, 1.5],
+          "text-field": [
+            "case",
+            ["has", "name"],
+            ["get", "name"], // 优先使用name字段
+            ["has", "ident"],
+            ["get", "ident"], // 如果没有name则使用ident
+            "", // 都没有则为空
+          ],
+          "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"],
+          "text-size": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            8,
+            12, // 在缩放级别8时，字体大小为12
+            12,
+            14, // 在缩放级别12时，字体大小为14
+          ],
+          "text-offset": [0, 1.5], // 文字偏移，避免与圆点重叠
           "text-anchor": "top",
-          "text-allow-overlap": false,
-          "text-ignore-placement": false,
+          "text-allow-overlap": false, // 避免文字重叠
+          "text-optional": true,
         },
         paint: {
           "text-color": "#ffffff",
           "text-halo-color": "#000000",
-          "text-halo-width": 1,
+          "text-halo-width": 1.5,
+          "text-opacity": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            8,
+            0.8, // 在缩放级别4时，透明度为0.8
+            10,
+            1.0, // 在缩放级别8及以上时，完全不透明
+          ],
         },
-        minzoom: 8,
-        maxzoom: 18,
+        minzoom: 6, // 从缩放级别3开始显示文字，避免低缩放时过于拥挤
+        maxzoom: 14, // 允许在更高缩放级别显示
       });
 
       // Change cursor on hover for both points and labels
@@ -130,9 +201,9 @@ export function initMiniMap(props: MiniMapProps) {
         map.getCanvas().style.cursor = "";
       });
     });
-    
+
     return map;
   }
-  
+
   return null;
 }

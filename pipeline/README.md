@@ -125,7 +125,6 @@ const map = new maplibregl.Map({
     -zg \
     --read-parallel \
     --drop-densest-as-needed \
-    --extend-zooms-if-still-dropping \
     --include=name \
     --include=ident \
     --include=elevation_ft \
