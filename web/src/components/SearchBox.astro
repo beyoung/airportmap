@@ -63,28 +63,10 @@
     
     // Check if elements exist
     if (!searchInput || !searchBtn || !searchResults || !resultsCount || !resultsList || !resultsLoading || !clearBtn) {
-      console.error('SearchBox: Required elements not found');
       return;
     }
     
-    // Debug: Check if input is accessible and focusable
-    console.log('SearchBox: Input element found:', searchInput);
-    console.log('SearchBox: Input disabled?', searchInput.disabled);
-    console.log('SearchBox: Input readonly?', searchInput.readOnly);
-    console.log('SearchBox: Input tabIndex:', searchInput.tabIndex);
-    
-    // Force focus and test input
-    searchInput.addEventListener('focus', () => {
-      console.log('SearchBox: Input focused successfully');
-    });
-    
-    searchInput.addEventListener('blur', () => {
-      console.log('SearchBox: Input lost focus');
-    });
-    
-    // Test click on input
     searchInput.addEventListener('click', () => {
-      console.log('SearchBox: Input clicked');
       searchInput.focus();
     });
     
@@ -95,17 +77,12 @@
     
     // Try to focus the input after a short delay
     setTimeout(() => {
-      console.log('SearchBox: Attempting to focus input');
       searchInput.focus();
-      console.log('SearchBox: Input focused, activeElement:', document.activeElement);
     }, 100);
     
-    // Add mousedown event to ensure input gets focus
-    searchInput.addEventListener('mousedown', (e) => {
-      console.log('SearchBox: Mousedown on input');
-      e.preventDefault();
+    // Add click event to ensure input gets focus
+    searchInput.addEventListener('click', (e) => {
       searchInput.focus();
-      e.stopPropagation();
     });
     
     // Search function
@@ -132,14 +109,26 @@
         displayResults(data.airports || [], data.total || 0);
         
       } catch (error) {
-        console.error('Search error:', error);
         displayError('Search failed. Please try again.');
       } finally {
         resultsLoading.classList.add('hidden');
       }
     }
     
-    // Display search results
+    // Get country flag emoji
+  function getCountryFlag(countryCode: string): string {
+    const flags: { [key: string]: string } = {
+      'US': '🇺🇸', 'CN': '🇨🇳', 'GB': '🇬🇧', 'DE': '🇩🇪', 'FR': '🇫🇷', 'JP': '🇯🇵', 'IN': '🇮🇳',
+      'IT': '🇮🇹', 'BR': '🇧🇷', 'CA': '🇨🇦', 'AU': '🇦🇺', 'RU': '🇷🇺', 'KR': '🇰🇷', 'ES': '🇪🇸',
+      'MX': '🇲🇽', 'ID': '🇮🇩', 'NL': '🇳🇱', 'SA': '🇸🇦', 'TR': '🇹🇷', 'TW': '🇹🇼', 'CH': '🇨🇭',
+      'BE': '🇧🇪', 'AR': '🇦🇷', 'IE': '🇮🇪', 'AT': '🇦🇹', 'CL': '🇨🇱', 'DK': '🇩🇰', 'FI': '🇫🇮',
+      'NO': '🇳🇴', 'PL': '🇵🇱', 'PT': '🇵🇹', 'SE': '🇸🇪', 'TH': '🇹🇭', 'VN': '🇻🇳', 'MY': '🇲🇾',
+      'SG': '🇸🇬', 'PH': '🇵🇭', 'AE': '🇦🇪', 'ZA': '🇿🇦', 'EG': '🇪🇬', 'NG': '🇳🇬', 'KE': '🇰🇪'
+    };
+    return flags[countryCode.toUpperCase()] || '🏳️';
+  }
+
+  // Display search results
     function displayResults(airports: any[], total: number) {
       resultsCount.textContent = `${total} result${total !== 1 ? 's' : ''}`;
       
@@ -149,47 +138,20 @@
       }
       
       resultsList.innerHTML = airports.map(airport => `
-        <div class="result-item" data-lat="${airport.latitude_deg}" data-lng="${airport.longitude_deg}" data-code="${airport.ident}">
-          <div class="result-main">
-            <h3 class="result-name">${airport.name}</h3>
-            <p class="result-details">
-              <span class="result-code">${airport.ident}</span>
-              <span class="result-type">${airport.type}</span>
-            </p>
-            <p class="result-location">${airport.municipality || 'Unknown'}, ${airport.iso_country}</p>
+        <a href="/airports/${airport.ident}" target="_blank" class="result-item" data-code="${airport.ident}">
+          <div class="result-content">
+            <div class="result-line1">
+              <span class="flag">${getCountryFlag(airport.iso_country)}</span>
+              <span class="name">${airport.name}</span>
+            </div>
+            <div class="result-line2">
+              <span class="code">${airport.ident}</span>
+              <span class="location">${airport.municipality || 'Unknown City'}, ${airport.iso_country}</span>
+              <span class="type">${airport.type.replace('_', ' ')}</span>
+            </div>
           </div>
-          <div class="result-actions">
-            <button type="button" class="show-on-map-btn" data-lat="${airport.latitude_deg}" data-lng="${airport.longitude_deg}">
-              Show on Map
-            </button>
-            <a href="/airports/${airport.ident}" class="view-details-btn">Details</a>
-          </div>
-        </div>
+        </a>
       `).join('');
-      
-      // Add click handlers for "Show on Map" buttons
-      document.querySelectorAll('.show-on-map-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          const target = e.target as HTMLElement;
-          const lat = parseFloat(target.dataset.lat || '0');
-          const lng = parseFloat(target.dataset.lng || '0');
-          
-          // Use the global map instance to fly to location
-          const map = (window as any).airportMap;
-          if (map) {
-            map.flyTo({
-              center: [lng, lat],
-              zoom: 12,
-              duration: 2000
-            });
-            
-            // Hide search results
-            searchResults.classList.add('hidden');
-            searchInput.value = '';
-            currentQuery = '';
-          }
-        });
-      });
     }
     
     // Display error message
@@ -201,39 +163,25 @@
     // Clear search results
     function clearResults() {
       searchResults.classList.add('hidden');
-      searchInput.value = '';
       currentQuery = '';
       resultsList.innerHTML = '';
     }
   
-    // Event listeners
+    // Event listeners for input
     searchInput.addEventListener('input', (e) => {
-      console.log('SearchBox: Input event triggered, value:', (e.target as HTMLInputElement).value);
       const query = (e.target as HTMLInputElement).value;
       
       clearTimeout(searchTimeout);
       
       if (query.trim().length < 2) {
-        clearResults();
+        searchResults.classList.add('hidden');
+        resultsList.innerHTML = '';
         return;
       }
       
       searchTimeout = setTimeout(() => {
         searchAirports(query);
       }, 300) as any;
-    });
-    
-    // Additional debug event listeners
-    searchInput.addEventListener('keydown', (e) => {
-      console.log('SearchBox: Keydown event:', e.key, 'Value before:', searchInput.value);
-    });
-    
-    searchInput.addEventListener('keyup', (e) => {
-      console.log('SearchBox: Keyup event:', e.key, 'Value after:', searchInput.value);
-    });
-    
-    searchInput.addEventListener('change', (e) => {
-      console.log('SearchBox: Change event, value:', (e.target as HTMLInputElement).value);
     });
     
     searchBtn.addEventListener('click', () => {
@@ -253,7 +201,7 @@
       }
     });
     
-    // Handle Enter key
+    // Handle Enter key for search
     searchInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
@@ -266,7 +214,7 @@
   }
 </script>
 
-<style>
+<style is:global>
   .search-container {
     position: relative;
     width: 100%;
@@ -297,7 +245,7 @@
     -ms-user-select: text;
   }
   
-  .search-input:focus {
+  .airport-search-input:focus {
     outline: none;
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
@@ -363,94 +311,138 @@
   .results-list {
     max-height: 320px;
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;               /* 取消卡片式间隔，改用横线分隔 */
+    padding: 0 0 1rem 0;  /* 增加底部内边距，避免与横线重合 */
+    text-align: left !important;
   }
   
   .result-item {
     display: flex;
-    justify-content: space-between;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 0rem 1rem;
+    width: 100%;
+    border: none;
+    border-top: 1px solid #e5e7eb;  /* 用横线分隔 */
+    border-radius: 0;                /* 去除圆角，保持列表风格 */
+    transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    position: relative;
+    background: white;
+    min-height: 56px;
+    text-align: left !important;
+  }
+
+  .result-item:first-child {
+    border-top: none; /* 顶部不画线 */
+  }
+
+  .result-item:hover {
+    background: #f8fafc;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  .result-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 0.25rem;
+    text-align: left !important;
+    width: 100%;
+  }
+
+  .result-line1,
+  .result-line2 {
+    display: flex;
     align-items: center;
-    padding: 1rem;
-    border-bottom: 1px solid #f3f4f6;
-    transition: background-color 0.2s;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    width: 100%;
+    text-align: left !important;
+  }
+
+  .result-line1 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1e293b;
+  }
+
+  .result-line2 {
+    font-size: 0.8rem;
+    color: #64748b;
+    padding-left: calc(1.25rem + 0.5rem); /* 为国旗预留的缩进 + 与名称间的间距 */
+  }
+
+  .flag {
+    font-size: 1rem;
+    flex-shrink: 0;
+    display: inline-block;
+    width: 1.25rem;           /* 固定国旗占位宽度，供第二行对齐使用 */
+    text-align: center;
+  }
+
+  .name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;                  /* 让机场名字占据剩余空间 */
+    min-width: 0;             /* 允许收缩 */
+    text-align: left;
+  }
+
+  .code {
+    font-family: 'Courier New', monospace;
+    font-weight: 500;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 0.1rem 0.4rem;
+    border-radius: 0.2rem;
+    flex-shrink: 0;
+  }
+
+  .location {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;                  /* 让位置信息占据剩余空间 */
+    min-width: 0;             /* 允许收缩 */
+    text-align: left;
+  }
+
+  .type {
+    flex-shrink: 0;
+    text-transform: capitalize;
+    text-align: left;
+    font-family: 'Courier New', monospace;  /* 与code保持一致的字体 */
+    font-weight: 500;
+    color: #059669;           /* 绿色主题 */
+    background: #ecfdf5;      /* 浅绿色背景 */
+    padding: 0.1rem 0.4rem;   /* 与code相同的内边距 */
+    border-radius: 0.2rem;    /* 与code相同的圆角 */
+    font-size: 0.75rem;       /* 稍小的字体 */
+  }
+  
+  .result-item {
+    /* legacy block removed to avoid overriding latest list design */
   }
   
   .result-item:hover {
-    background: #f9fafb;
+    /* legacy hover removed */
   }
   
-  .result-item:last-child {
-    border-bottom: none;
-  }
-  
-  .result-main {
-    flex: 1;
-  }
-  
-  .result-name {
-    font-weight: 600;
-    color: #111827;
-    margin-bottom: 0.25rem;
-  }
-  
-  .result-details {
-    display: flex;
-    gap: 0.75rem;
-    margin-bottom: 0.25rem;
-    font-size: 0.875rem;
-  }
-  
-  .result-code {
-    background: #3b82f6;
-    color: white;
-    padding: 0.125rem 0.375rem;
-    border-radius: 0.25rem;
-    font-weight: 500;
-  }
-  
-  .result-type {
-    color: #6b7280;
-    text-transform: capitalize;
-  }
-  
-  .result-location {
-    color: #6b7280;
-    font-size: 0.875rem;
-  }
-  
-  .result-actions {
-    display: flex;
-    gap: 0.5rem;
-    flex-shrink: 0;
-  }
-  
-  .show-on-map-btn {
-    background: #3b82f6;
-    color: white;
-    border: none;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.25rem;
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: background-color 0.2s;
-  }
-  
-  .show-on-map-btn:hover {
-    background: #2563eb;
-  }
-  
-  .view-details-btn {
-    background: #f3f4f6;
-    color: #374151;
-    border: none;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.25rem;
-    font-size: 0.875rem;
-    text-decoration: none;
-    transition: background-color 0.2s;
-  }
-  
-  .view-details-btn:hover {
-    background: #e5e7eb;
+  .result-item:focus-visible,
+  .result-item:focus-within {
+    outline: none;
+    background: #eef2ff;
+    box-shadow: inset 3px 0 0 #6366f1, 0 1px 4px rgba(0,0,0,0.06);
   }
   
   .results-loading {
