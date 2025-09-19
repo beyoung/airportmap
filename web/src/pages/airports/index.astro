@@ -2,8 +2,9 @@
 import Layout from '../../layouts/Layout.astro';
 import { AirportDatabase } from '../../lib/database';
 
-const title = 'All Airports - AyaMap Airports';
+const title = 'Search & Filter all airports - AyaMap Airports';
 const description = 'Browse all airports worldwide. Search and filter through our comprehensive database of global aviation infrastructure.';
+const canonicalUrl = 'https://airport.ayamap.com/airports/';
 
 // Get URL parameters
 const url = new URL(Astro.request.url);
@@ -75,7 +76,7 @@ function buildUrl(params: Record<string, string | number>) {
 	<!-- SEO Meta Tags -->
 	<meta name="description" content={description} slot="head" />
 	<meta name="keywords" content="airports, aviation, global airports, airport database, flight infrastructure" slot="head" />
-	<link rel="canonical" href="https://airport.ayamap.com/airports/" slot="head" />
+	<link rel="canonical" href={canonicalUrl} slot="head" />
 	
 	<!-- Open Graph Meta Tags -->
 	<meta property="og:title" content={title} slot="head" />
@@ -87,23 +88,24 @@ function buildUrl(params: Record<string, string | number>) {
 		<!-- Header Section -->
 		<section class="bg-white shadow-sm">
 			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-				<div class="flex items-center justify-between">
-					<div>
-						<nav class="flex items-center space-x-2 text-sm text-gray-500 mb-4">
-							<a href="/" class="hover:text-blue-600">Home</a>
-							<span>/</span>
-							<span class="font-medium text-gray-900">Airports</span>
-						</nav>
-						<h1 class="text-4xl font-bold text-gray-900 mb-2">
-							All Airports
-						</h1>
-						<p class="text-xl text-gray-600">
-							Explore our comprehensive database of airports worldwide
-						</p>
-					</div>
+				<div class="text-center">
+					<nav class="flex items-center space-x-2 text-sm text-gray-500 mb-4">
+						<a href="/" class="hover:text-blue-600">Home</a>
+						<span>/</span>
+						<span class="font-medium text-gray-900">Airports</span>
+					</nav>
+					<h1 class="text-4xl font-bold text-gray-900 mb-2">
+						All Airports
+					</h1>
+					<p class="text-xl text-gray-600">
+						Explore our comprehensive database of airports worldwide
+					</p>
 				</div>
 				
 				<!-- Stats Section -->
+				<div class="mb-8">
+					<h2 class="text-2xl font-bold text-gray-900 mb-4 text-center">Global Airport Statistics</h2>
+				</div>
 				<div class="grid grid-cols-2 md:grid-cols-5 gap-4 mt-8">
 					<div class="bg-blue-50 p-4 rounded-lg text-center">
 						<div class="text-2xl font-bold text-blue-600">{stats.total.toLocaleString()}</div>
@@ -170,6 +172,9 @@ function buildUrl(params: Record<string, string | number>) {
 		<!-- Airports Section -->
 		<section class="py-8">
 			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+				<div class="mb-6">
+					<h2 class="text-2xl font-bold text-gray-900 mb-4">Search Results</h2>
+				</div>
 				<!-- Results Info -->
 				<div class="mb-6">
 					<p class="text-gray-600">

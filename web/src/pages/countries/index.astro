@@ -19,9 +19,9 @@ const stats = {
 	countries: countries.length
 };
 
-const title = 'Countries - AyaMap Airports';
+const title = 'Explore airports by countries - AyaMap Airports';
 const description = 'Browse airports by country. Explore aviation infrastructure across different nations and territories worldwide.';
-const canonicalUrl = 'https://airport.ayamap.com/countries';
+const canonicalUrl = 'https://airport.ayamap.com/countries/';
 ---
 
 <Layout title={title}>
@@ -65,6 +65,11 @@ const canonicalUrl = 'https://airport.ayamap.com/countries';
 		<section class="bg-white shadow-sm">
 			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 				<div class="text-center">
+					<nav class="flex items-center space-x-2 text-sm text-gray-500 mb-4">
+						<a href="/" class="hover:text-blue-600">Home</a>
+						<span>/</span>
+						<span class="font-medium text-gray-900">Countries</span>
+					</nav>
 					<h1 class="text-4xl font-bold text-gray-900 mb-4">
 						Countries & Territories
 					</h1>
@@ -74,6 +79,9 @@ const canonicalUrl = 'https://airport.ayamap.com/countries';
 				</div>
 				
 				<!-- Stats Section -->
+				<div class="mb-8">
+					<h2 class="text-2xl font-bold text-gray-900 mb-4 text-center">Global Aviation Statistics</h2>
+				</div>
 				<div class="grid grid-cols-2 md:grid-cols-5 gap-4 mt-8">
 					<div class="bg-blue-50 p-4 rounded-lg text-center">
 						<div class="text-2xl font-bold text-blue-600">{stats.total.toLocaleString()}</div>
@@ -127,6 +135,10 @@ const canonicalUrl = 'https://airport.ayamap.com/countries';
 		<!-- Countries Grid -->
 		<section id="countries-section" class="py-8">
 			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+				<div class="mb-6">
+					<h2 class="text-2xl font-bold text-gray-900 mb-2">Browse Countries & Territories</h2>
+					<p class="text-gray-600">Select a country to explore its airports and aviation infrastructure</p>
+				</div>
 				<!-- Countries List -->
 				<div id="countries-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 					{countries.map(country => (

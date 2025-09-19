@@ -6,7 +6,7 @@ import SearchBox from "../components/SearchBox.astro";
 const title = "AyaMap Airports - Interactive World Airport Map";
 const description =
   "Explore airports worldwide with our interactive map. Search, filter, and discover detailed information about airports across the globe.";
-const canonicalUrl = "https://airport.ayamap.com";
+const canonicalUrl = "https://airport.ayamap.com/";
 ---
 
 <Layout title={title}>
@@ -73,6 +73,9 @@ const canonicalUrl = "https://airport.ayamap.com";
     <!-- Quick Stats Section -->
     <section class="bg-white border-t border-gray-200">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div class="text-center mb-8">
+          <h2 class="text-2xl font-bold text-gray-900 mb-4">Global Airport Statistics</h2>
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div class="text-center">
             <div class="text-3xl font-bold text-blue-600 mb-2">80K+</div>
