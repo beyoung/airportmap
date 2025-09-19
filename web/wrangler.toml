@@ -1,6 +1,11 @@
 name = "airports-website"
-compatibility_date = "2024-09-23"
+compatibility_date = "2025-01-15"
 compatibility_flags = ["nodejs_compat"]
+
+pages_build_output_dir = "dist"
+# Logging configuration
+[observability]
+enabled = true
 
 # D1 Database configuration
 [[d1_databases]]
@@ -8,11 +13,12 @@ binding = "DB"
 database_name = "airports-db"
 database_id = "aca4ae33-a7ac-465b-8429-986bf038f5c4"
 
-# Pages configuration for deployment
-[env.production]
-name = "airports-website-production"
+# Production logging configuration
+[env.production.observability]
+enabled = true
 
+# D1 Database configuration for production
 [[env.production.d1_databases]]
 binding = "DB"
-database_name = "airports-db-production"
-database_id = "43077111-4de6-4375-b5d3-40cf344cfec4"
+database_name = "airports-db"
+database_id = "aca4ae33-a7ac-465b-8429-986bf038f5c4"

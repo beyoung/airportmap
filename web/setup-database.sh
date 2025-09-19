@@ -13,13 +13,13 @@ echo "📦 Creating D1 database..."
 
 # Apply schema
 echo "🏗️  Applying database schema..."
-wrangler d1 execute airports-db --local --file=./schema.sql
+# wrangler d1 execute airports-db --remote --file=./schema.sql
 
 # Check if data export exists
-if [ ! -f "./data-export.sql" ]; then
-    echo "📊 Exporting data from airports.db..."
-    node migrate-data.js
-fi
+# if [ ! -f "./data-export.sql" ]; then
+#     echo "📊 Exporting data from airports.db..."
+#     node migrate-data.js
+# fi
 
 # Import data (in smaller batches to avoid memory issues)
 echo "📥 Importing airport data..."
@@ -29,7 +29,8 @@ if [ -f "./data-export.sql" ]; then
     
     for chunk in data-chunk-*; do
         echo "Importing $chunk..."
-        wrangler d1 execute airports-db --local --file="$chunk"
+        wrangler d1 execute airports-db --remote --file="$chunk"
+        sleep 2
     done
     
     # Clean up chunk files
@@ -42,11 +43,14 @@ else
 fi
 
 # Verify the import
-echo "🔍 Verifying database..."
-wrangler d1 execute airports-db --local --command="SELECT COUNT(*) as airport_count FROM airport;"
-wrangler d1 execute airports-db --local --command="SELECT COUNT(*) as address_count FROM address;"
-wrangler d1 execute airports-db --local --command="SELECT COUNT(*) as country_stats_count FROM country_stats;"
-wrangler d1 execute airports-db --local --command="SELECT country_code, airport_count, large_airport_count, medium_airport_count, small_airport_count, heliport_count, seaplane_base_count, other_count FROM country_stats LIMIT 5;"
+# echo "🔍 Verifying database..."
+# wrangler d1 execute airports-db --local --command="SELECT COUNT(*) as airport_count FROM airport;"
+# wrangler d1 execute airports-db --local --command="SELECT COUNT(*) as address_count FROM address;"
+# wrangler d1 execute airports-db --local --command="SELECT COUNT(*) as country_stats_count FROM country_stats;"
+# wrangler d1 execute airports-db --local --command="SELECT country_code, airport_count, large_airport_count, medium_airport_count, small_airport_count, heliport_count, seaplane_base_count, other_count FROM country_stats LIMIT 5;"
 
-echo "🎉 Database setup completed successfully!"
-echo "💡 You can now run 'npm run dev' to start the development server."
+# echo "🎉 Database setup completed successfully!"
+# echo "💡 You can now run 'npm run dev' to start the development server."
+
+
+wrangler d1 execute airports-db --remote --file=data-chunk-am

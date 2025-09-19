@@ -12,7 +12,7 @@ const countries = await airportDb.getCountryStats();
 
 const title = 'Countries - AyaMap Airports';
 const description = 'Browse airports by country. Explore aviation infrastructure across different nations and territories worldwide.';
-const canonicalUrl = 'https://ayamap-airports.pages.dev/countries';
+const canonicalUrl = 'https://airport.ayamap.com/countries';
 ---
 
 <Layout title={title}>
@@ -34,7 +34,7 @@ const canonicalUrl = 'https://ayamap-airports.pages.dev/countries';
 		"@type": "CollectionPage",
 		"name": "Airport Countries Directory",
 		"description": "Directory of airports organized by country",
-		"url": "https://ayamap-airports.pages.dev/countries",
+		"url": "https://airport.ayamap.com/countries",
 		"mainEntity": {
 			"@type": "ItemList",
 			"numberOfItems": countries.length,
@@ -44,7 +44,7 @@ const canonicalUrl = 'https://ayamap-airports.pages.dev/countries';
 				"item": {
 					"@type": "Place",
 					"name": country.country_name || country.country,
-					"url": `https://ayamap-airports.pages.dev/countries/${country.country?.toLowerCase()}`
+					"url": `https://airport.ayamap.com/countries/${country.country?.toLowerCase()}`
 				}
 			}))
 		}

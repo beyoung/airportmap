@@ -109,7 +109,7 @@ const keywords = airportData.keywords ? airportData.keywords.split(',').map(k =>
 
 const title = `${airportData.name || `${ident.toUpperCase()} Airport`} - AyaMap Airports`;
 const description = `Detailed information about ${airportData.name || ident.toUpperCase()} airport in ${airportData.municipality || 'Unknown City'}, ${airportData.iso_country || 'Unknown Country'}.`;
-const canonicalUrl = `https://ayamap-airports.pages.dev/airports/${ident}`;
+const canonicalUrl = `https://airport.ayamap.com/airports/${ident}`;
 
 // Helper function for type badges
 function getTypeBadge(type: string | null) {
@@ -162,7 +162,7 @@ function getTypeBadge(type: string | null) {
 			"longitude": airportData.longitude_deg
 		} : undefined,
 		"elevation": airportData.elevation_ft ? `${airportData.elevation_ft} ft` : undefined,
-		"url": `https://ayamap-airports.pages.dev/airports/${airportData.ident}`
+		"url": `https://airport.ayamap.com/airports/${airportData.ident}`
 	}
 	</script>
 

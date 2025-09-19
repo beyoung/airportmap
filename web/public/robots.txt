@@ -2,7 +2,7 @@ User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://ayamap-airports.pages.dev/sitemap.xml
+Sitemap: https://airport.ayamap.com/sitemap.xml
 
 # Crawl-delay for respectful crawling
 Crawl-delay: 1
