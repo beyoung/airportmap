@@ -10,6 +10,15 @@ if (!db) {
 const airportDb = new AirportDatabase(db);
 const countries = await airportDb.getCountryStats();
 
+// Calculate global stats similar to airports page
+const stats = {
+	total: countries.reduce((sum, country) => sum + country.airport_count, 0),
+	large: countries.reduce((sum, country) => sum + (country.large_airport_count || 0), 0),
+	medium: countries.reduce((sum, country) => sum + (country.medium_airport_count || 0), 0),
+	small: countries.reduce((sum, country) => sum + (country.small_airport_count || 0), 0),
+	countries: countries.length
+};
+
 const title = 'Countries - AyaMap Airports';
 const description = 'Browse airports by country. Explore aviation infrastructure across different nations and territories worldwide.';
 const canonicalUrl = 'https://airport.ayamap.com/countries';
@@ -63,6 +72,30 @@ const canonicalUrl = 'https://airport.ayamap.com/countries';
 						Explore airports by country and discover aviation infrastructure worldwide
 					</p>
 				</div>
+				
+				<!-- Stats Section -->
+				<div class="grid grid-cols-2 md:grid-cols-5 gap-4 mt-8">
+					<div class="bg-blue-50 p-4 rounded-lg text-center">
+						<div class="text-2xl font-bold text-blue-600">{stats.total.toLocaleString()}</div>
+						<div class="text-sm text-gray-600">Total Airports</div>
+					</div>
+					<div class="bg-green-50 p-4 rounded-lg text-center">
+						<div class="text-2xl font-bold text-green-600">{stats.large.toLocaleString()}</div>
+						<div class="text-sm text-gray-600">Large Airports</div>
+					</div>
+					<div class="bg-yellow-50 p-4 rounded-lg text-center">
+						<div class="text-2xl font-bold text-yellow-600">{stats.medium.toLocaleString()}</div>
+						<div class="text-sm text-gray-600">Medium Airports</div>
+					</div>
+					<div class="bg-purple-50 p-4 rounded-lg text-center">
+						<div class="text-2xl font-bold text-purple-600">{stats.small.toLocaleString()}</div>
+						<div class="text-sm text-gray-600">Small Airports</div>
+					</div>
+					<div class="bg-gray-50 p-4 rounded-lg text-center">
+						<div class="text-2xl font-bold text-gray-600">{stats.countries.toLocaleString()}</div>
+						<div class="text-sm text-gray-600">Countries</div>
+					</div>
+				</div>
 			</div>
 		</section>
 
@@ -91,40 +124,34 @@ const canonicalUrl = 'https://airport.ayamap.com/countries';
 			</div>
 		</section>
 
-		<!-- Loading State -->
-		<section id="loading-section" class="py-12">
-			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-				<div class="text-center">
-					<div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-					<p class="text-gray-600">Loading countries...</p>
-				</div>
-			</div>
-		</section>
-
 		<!-- Countries Grid -->
-		<section id="countries-section" class="hidden py-8">
+		<section id="countries-section" class="py-8">
 			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-				<!-- Stats Summary -->
-				<div id="stats-summary" class="bg-white rounded-lg shadow-sm p-6 mb-8">
-					<div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-						<div>
-							<div id="total-countries" class="text-3xl font-bold text-blue-600">-</div>
-							<div class="text-gray-600">Countries & Territories</div>
-						</div>
-						<div>
-							<div id="total-airports" class="text-3xl font-bold text-green-600">-</div>
-							<div class="text-gray-600">Total Airports</div>
-						</div>
-						<div>
-							<div id="avg-airports" class="text-3xl font-bold text-purple-600">-</div>
-							<div class="text-gray-600">Average per Country</div>
-						</div>
-					</div>
-				</div>
-
 				<!-- Countries List -->
 				<div id="countries-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-					<!-- Countries will be populated here -->
+					{countries.map(country => (
+						<div class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6 country-card" 
+							 data-country={country.country} 
+							 data-country-name={country.country_name || country.country}
+							 data-airport-count={country.airport_count}>
+							<div class="flex items-center justify-between mb-4">
+								<div class="flex items-center gap-3">
+									<span class="text-2xl country-flag" data-code={country.country}></span>
+									<h3 class="text-lg font-semibold text-gray-900">{country.country_name || country.country}</h3>
+								</div>
+								<span class="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded">{country.country}</span>
+							</div>
+							<div class="mb-4">
+								<div class="text-3xl font-bold text-blue-600 mb-1">{country.airport_count.toLocaleString()}</div>
+								<div class="text-sm text-gray-600">Airport{country.airport_count !== 1 ? 's' : ''}</div>
+							</div>
+							<div class="flex gap-2">
+								<a href={`/countries/${country.country}`} class="flex-1 bg-blue-600 text-white text-center py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+									View Airports
+								</a>
+							</div>
+						</div>
+					))}
 				</div>
 
 				<!-- Countries Table (Alternative View) -->
@@ -139,23 +166,30 @@ const canonicalUrl = 'https://airport.ayamap.com/countries';
 							</tr>
 						</thead>
 						<tbody id="countries-table-body" class="bg-white divide-y divide-gray-200">
-							<!-- Table rows will be populated here -->
+							{countries.map(country => (
+								<tr class="hover:bg-gray-50 country-row" 
+									data-country={country.country} 
+									data-country-name={country.country_name || country.country}
+									data-airport-count={country.airport_count}>
+									<td class="px-6 py-4 whitespace-nowrap">
+										<div class="flex items-center gap-3">
+											<span class="text-xl country-flag" data-code={country.country}></span>
+											<div class="text-sm font-medium text-gray-900">{country.country_name || country.country}</div>
+										</div>
+									</td>
+									<td class="px-6 py-4 whitespace-nowrap">
+										<span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">{country.country}</span>
+									</td>
+									<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+										{country.airport_count.toLocaleString()}
+									</td>
+									<td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+										<a href={`/countries/${country.country}`} class="text-blue-600 hover:text-blue-900">View Airports</a>
+									</td>
+								</tr>
+							))}
 						</tbody>
 					</table>
-				</div>
-			</div>
-		</section>
-
-		<!-- Error State -->
-		<section id="error-section" class="hidden py-12">
-			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-				<div class="text-center">
-					<div class="text-red-500 text-6xl mb-4">⚠️</div>
-					<h2 class="text-2xl font-bold text-gray-900 mb-2">Failed to Load Countries</h2>
-					<p class="text-gray-600 mb-4">There was an error loading the countries data.</p>
-					<button id="retry-btn" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-						Try Again
-					</button>
 				</div>
 			</div>
 		</section>
@@ -169,8 +203,6 @@ const canonicalUrl = 'https://airport.ayamap.com/countries';
 		airport_count: number;
 	}
 
-	let allCountries: CountryStats[] = [];
-	let filteredCountries: CountryStats[] = [];
 	let isGridView = true;
 
 	// Function to get country flag emoji
@@ -187,145 +219,75 @@ const canonicalUrl = 'https://airport.ayamap.com/countries';
 	}
 
 	// DOM elements
-	const loadingSection = document.getElementById('loading-section')!;
-	const countriesSection = document.getElementById('countries-section')!;
-	const errorSection = document.getElementById('error-section')!;
 	const countriesGrid = document.getElementById('countries-grid')!;
 	const countriesTable = document.getElementById('countries-table')!;
-	const countriesTableBody = document.getElementById('countries-table-body')!;
 	const countrySearch = document.getElementById('country-search') as HTMLInputElement;
-	const sortSelect = document.getElementById('sort-select') as unknown as HTMLSelectElement;
+	const sortSelect = document.getElementById('sort-select') as HTMLSelectElement;
 	const viewToggle = document.getElementById('view-toggle')!;
 	const viewIcon = document.getElementById('view-icon')!;
-	const retryBtn = document.getElementById('retry-btn')!;
 
-	// Stats elements
-	const totalCountriesEl = document.getElementById('total-countries')!;
-	const totalAirportsEl = document.getElementById('total-airports')!;
-	const avgAirportsEl = document.getElementById('avg-airports')!;
-
-	// Load countries data
-	async function loadCountries() {
-		try {
-			showLoading();
-			
-			const response = await fetch('/api/countries/stats?limit=1000');
-			if (!response.ok) {
-				throw new Error('Failed to fetch countries');
-			}
-			
-			const data: any = await response.json();
-			allCountries = data.countries || [];
-			filteredCountries = [...allCountries];
-			
-			updateStats();
-			sortCountries();
-			renderCountries();
-			showCountries();
-			
-		} catch (error) {
-			console.error('Error loading countries:', error);
-			showError();
-		}
-	}
-
-	// Update statistics
-	function updateStats() {
-		const totalCountries = allCountries.length;
-		const totalAirports = allCountries.reduce((sum, country) => sum + country.airport_count, 0);
-		const avgAirports = totalCountries > 0 ? Math.round(totalAirports / totalCountries) : 0;
-		
-		totalCountriesEl.textContent = totalCountries.toLocaleString();
-		totalAirportsEl.textContent = totalAirports.toLocaleString();
-		avgAirportsEl.textContent = avgAirports.toString();
+	// Get all country elements
+	function getAllCountryElements(): { cards: HTMLElement[], rows: HTMLElement[] } {
+		const cards = Array.from(document.querySelectorAll('.country-card')) as HTMLElement[];
+		const rows = Array.from(document.querySelectorAll('.country-row')) as HTMLElement[];
+		return { cards, rows };
 	}
 
 	// Sort countries
 	function sortCountries() {
 		const sortBy = sortSelect.value;
+		const { cards, rows } = getAllCountryElements();
 		
-		filteredCountries.sort((a, b) => {
+		// Sort cards
+		const sortedCards = cards.sort((a, b) => {
 			if (sortBy === 'airports') {
-				return b.airport_count - a.airport_count;
+				const countA = parseInt(a.dataset.airportCount || '0');
+				const countB = parseInt(b.dataset.airportCount || '0');
+				return countB - countA;
 			} else {
-				const nameA = a.country_name || a.country;
-				const nameB = b.country_name || b.country;
+				const nameA = a.dataset.countryName || '';
+				const nameB = b.dataset.countryName || '';
 				return nameA.localeCompare(nameB);
 			}
 		});
+		
+		// Sort rows
+		const sortedRows = rows.sort((a, b) => {
+			if (sortBy === 'airports') {
+				const countA = parseInt(a.dataset.airportCount || '0');
+				const countB = parseInt(b.dataset.airportCount || '0');
+				return countB - countA;
+			} else {
+				const nameA = a.dataset.countryName || '';
+				const nameB = b.dataset.countryName || '';
+				return nameA.localeCompare(nameB);
+			}
+		});
+		
+		// Re-append sorted elements
+		sortedCards.forEach(card => countriesGrid.appendChild(card));
+		const tableBody = document.getElementById('countries-table-body')!;
+		sortedRows.forEach(row => tableBody.appendChild(row));
 	}
 
 	// Filter countries
 	function filterCountries() {
 		const query = countrySearch.value.toLowerCase().trim();
+		const { cards, rows } = getAllCountryElements();
 		
-		if (!query) {
-			filteredCountries = [...allCountries];
-		} else {
-			filteredCountries = allCountries.filter(country => 
-					(country.country_name || '').toLowerCase().includes(query) ||
-					country.country.toLowerCase().includes(query)
-				);
-		}
+		cards.forEach(card => {
+			const countryName = (card.dataset.countryName || '').toLowerCase();
+			const countryCode = (card.dataset.country || '').toLowerCase();
+			const matches = !query || countryName.includes(query) || countryCode.includes(query);
+			card.style.display = matches ? 'block' : 'none';
+		});
 		
-		sortCountries();
-		renderCountries();
-	}
-
-	// Render countries
-	function renderCountries() {
-		if (isGridView) {
-			renderGrid();
-		} else {
-			renderTable();
-		}
-	}
-
-	// Render grid view
-	function renderGrid() {
-		countriesGrid.innerHTML = filteredCountries.map(country => `
-			<div class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6">
-				<div class="flex items-center justify-between mb-4">
-					<div class="flex items-center gap-3">
-						<span class="text-2xl">${getCountryFlag(country.country)}</span>
-						<h3 class="text-lg font-semibold text-gray-900">${country.country_name || country.country}</h3>
-					</div>
-					<span class="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded">${country.country}</span>
-				</div>
-				<div class="mb-4">
-					<div class="text-3xl font-bold text-blue-600 mb-1">${country.airport_count.toLocaleString()}</div>
-					<div class="text-sm text-gray-600">Airport${country.airport_count !== 1 ? 's' : ''}</div>
-				</div>
-				<div class="flex gap-2">
-					<a href="/countries/${country.country}" class="flex-1 bg-blue-600 text-white text-center py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
-						View Airports
-					</a>
-				</div>
-			</div>
-		`).join('');
-	}
-
-	// Render table view
-	function renderTable() {
-		countriesTableBody.innerHTML = filteredCountries.map(country => `
-			<tr class="hover:bg-gray-50">
-				<td class="px-6 py-4 whitespace-nowrap">
-					<div class="flex items-center gap-3">
-						<span class="text-xl">${getCountryFlag(country.country)}</span>
-						<div class="text-sm font-medium text-gray-900">${country.country_name || country.country}</div>
-					</div>
-				</td>
-				<td class="px-6 py-4 whitespace-nowrap">
-					<span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">${country.country}</span>
-				</td>
-				<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-					${country.airport_count.toLocaleString()}
-				</td>
-				<td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-					<a href="/countries/${country.country}" class="text-blue-600 hover:text-blue-900">View Airports</a>
-				</td>
-			</tr>
-		`).join('');
+		rows.forEach(row => {
+			const countryName = (row.dataset.countryName || '').toLowerCase();
+			const countryCode = (row.dataset.country || '').toLowerCase();
+			const matches = !query || countryName.includes(query) || countryCode.includes(query);
+			row.style.display = matches ? 'table-row' : 'none';
+		});
 	}
 
 	// Toggle view
@@ -341,38 +303,26 @@ const canonicalUrl = 'https://airport.ayamap.com/countries';
 			countriesTable.classList.remove('hidden');
 			viewIcon.textContent = '🔲';
 		}
-		
-		renderCountries();
 	}
 
-	// Show/hide sections
-	function showLoading() {
-		loadingSection.classList.remove('hidden');
-		countriesSection.classList.add('hidden');
-		errorSection.classList.add('hidden');
-	}
-
-	function showCountries() {
-		loadingSection.classList.add('hidden');
-		countriesSection.classList.remove('hidden');
-		errorSection.classList.add('hidden');
-	}
-
-	function showError() {
-		loadingSection.classList.add('hidden');
-		countriesSection.classList.add('hidden');
-		errorSection.classList.remove('hidden');
+	// Initialize country flags
+	function initializeFlags() {
+		const flagElements = document.querySelectorAll('.country-flag');
+		flagElements.forEach(element => {
+			const countryCode = element.getAttribute('data-code');
+			if (countryCode) {
+				element.textContent = getCountryFlag(countryCode);
+			}
+		});
 	}
 
 	// Event listeners
 	countrySearch.addEventListener('input', filterCountries);
-	sortSelect.addEventListener('change', () => {
-		sortCountries();
-		renderCountries();
-	});
+	sortSelect.addEventListener('change', sortCountries);
 	viewToggle.addEventListener('click', toggleView);
-	retryBtn.addEventListener('click', loadCountries);
 
 	// Initialize
-	loadCountries();
+	document.addEventListener('DOMContentLoaded', () => {
+		initializeFlags();
+	});
 </script>
