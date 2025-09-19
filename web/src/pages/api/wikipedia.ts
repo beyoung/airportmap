@@ -38,7 +38,7 @@ export const GET: APIRoute = async ({ request }) => {
 		
 		const response = await fetch(apiUrl, {
 			headers: {
-				'User-Agent': 'AyaMap-Airports/1.0 (https://ayamap-airports.pages.dev)'
+				'User-Agent': 'AyaMap-Airports/1.0 (https://airport.ayamap.com)'
 			}
 		});
 		

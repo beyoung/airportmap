@@ -10,73 +10,50 @@ export const GET: APIRoute = async ({ locals }) => {
 
 		const airportDb = new AirportDatabase(db);
 		
-		// Get all airports for sitemap
+		// Get total airport count to calculate number of airport sitemap pages
 		const airports = await airportDb.getAirportsInBounds({
 			north: 90,
 			south: -90,
 			east: 180,
 			west: -180,
-			limit: 50000
+			limit: 100000 // Get a large number to count total
 		});
 		
-		// Get country stats for country pages
-		const countryStats = await airportDb.getCountryStats();
+		const AIRPORTS_PER_PAGE = 8000;
+		const totalAirportPages = Math.ceil(airports.length / AIRPORTS_PER_PAGE);
 		
-		const baseUrl = 'https://ayamap-airports.pages.dev';
+		const baseUrl = 'https://airport.ayamap.com';
 		const currentDate = new Date().toISOString().split('T')[0];
 		
+		// Use sitemap index format for better organization
 		let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 `;
 		
-		// Add main pages
-		sitemap += `	<url>
-		<loc>${baseUrl}/</loc>
+		// Add main pages sitemap
+		sitemap += `	<sitemap>
+		<loc>${baseUrl}/sitemap-main.xml</loc>
 		<lastmod>${currentDate}</lastmod>
-		<changefreq>weekly</changefreq>
-		<priority>1.0</priority>
-	</url>
+	</sitemap>
 `;
 		
-		sitemap += `	<url>
-		<loc>${baseUrl}/countries</loc>
+		// Add countries sitemap
+		sitemap += `	<sitemap>
+		<loc>${baseUrl}/sitemap-countries.xml</loc>
 		<lastmod>${currentDate}</lastmod>
-		<changefreq>weekly</changefreq>
-		<priority>0.8</priority>
-	</url>
+	</sitemap>
 `;
 		
-		// Add country pages
-		for (const country of countryStats) {
-			if (country.country) {
-				sitemap += `	<url>
-		<loc>${baseUrl}/countries/${country.country.toLowerCase()}</loc>
+		// Add airport sitemaps (one for each page)
+		for (let i = 1; i <= totalAirportPages; i++) {
+			sitemap += `	<sitemap>
+		<loc>${baseUrl}/sitemap-airports-${i}.xml</loc>
 		<lastmod>${currentDate}</lastmod>
-		<changefreq>monthly</changefreq>
-		<priority>0.7</priority>
-	</url>
+	</sitemap>
 `;
-			}
 		}
 		
-		// Add airport pages (limit to major airports to avoid huge sitemap)
-		const majorAirports = airports.filter(airport => 
-			airport.type === 'large_airport' || airport.type === 'medium_airport'
-		).slice(0, 10000); // Limit to 10k airports
-		
-		for (const airport of majorAirports) {
-			if (airport.ident) {
-				sitemap += `	<url>
-		<loc>${baseUrl}/airports/${airport.ident}</loc>
-		<lastmod>${currentDate}</lastmod>
-		<changefreq>monthly</changefreq>
-		<priority>0.6</priority>
-	</url>
-`;
-			}
-		}
-		
-		sitemap += `</urlset>`;
+		sitemap += `</sitemapindex>`;
 		
 		return new Response(sitemap, {
 			headers: {
@@ -86,7 +63,7 @@ export const GET: APIRoute = async ({ locals }) => {
 		});
 		
 	} catch (error) {
-		console.error('Error generating sitemap:', error);
-		return new Response('Error generating sitemap', { status: 500 });
+		console.error('Error generating sitemap index:', error);
+		return new Response('Error generating sitemap index', { status: 500 });
 	}
 };

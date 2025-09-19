@@ -362,13 +362,15 @@ export class AirportDatabase {
     south,
     east,
     west,
-    limit = 1000
+    limit = 1000,
+    offset = 0
   }: {
     north: number;
     south: number;
     east: number;
     west: number;
     limit?: number;
+    offset?: number;
   }): Promise<Airport[]> {
     const query = `
       SELECT *
@@ -382,11 +384,11 @@ export class AirportDatabase {
              WHEN type = 'medium_airport' THEN 2
              WHEN type = 'small_airport' THEN 3
              ELSE 4 END
-      LIMIT ?
+      LIMIT ? OFFSET ?
     `;
     
     const results = await this.db.prepare(query)
-      .bind(south, north, west, east, limit)
+      .bind(south, north, west, east, limit, offset)
       .all();
     
     return results.results || [];
