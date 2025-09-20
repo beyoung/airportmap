@@ -1,13 +1,16 @@
 ---
-import Header from '../components/Header.astro';
-import Footer from '../components/Footer.astro';
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
 
 export interface Props {
   title: string;
   description?: string;
 }
 
-const { title, description = 'Global Airport Database - Find airports worldwide with interactive maps and detailed information' } = Astro.props;
+const {
+  title,
+  description = "Global Airport Database - Find airports worldwide with interactive maps and detailed information",
+} = Astro.props;
 ---
 
 <!doctype html>
@@ -19,7 +22,7 @@ const { title, description = 'Global Airport Database - Find airports worldwide 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
-    
+
     <!-- SEO Meta Tags -->
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -27,14 +30,34 @@ const { title, description = 'Global Airport Database - Find airports worldwide 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
-    
+
     <!-- clarity scripts-->
     <script type="text/javascript">
-        (function(c,l,a,r,i,t,y){
-            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-        })(window, document, "clarity", "script", "td8ze64bw8");
+      (function (c, l, a, r, i, t, y) {
+        c[a] =
+          c[a] ||
+          function () {
+            (c[a].q = c[a].q || []).push(arguments);
+          };
+        t = l.createElement(r);
+        t.async = 1;
+        t.src = "https://www.clarity.ms/tag/" + i;
+        y = l.getElementsByTagName(r)[0];
+        y.parentNode.insertBefore(t, y);
+      })(window, document, "clarity", "script", "td8ze64bw8");
+    </script>
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-7SNKXHGDN5"
+    ></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+
+      gtag("config", "G-7SNKXHGDN5");
     </script>
 
     <meta name="msvalidate.01" content="BD79A06DDF58F498421D775BF3271EF8" />
@@ -42,11 +65,11 @@ const { title, description = 'Global Airport Database - Find airports worldwide 
   </head>
   <body class="bg-gray-50 text-gray-900">
     <Header />
-    
+
     <main>
       <slot />
     </main>
-    
+
     <Footer />
   </body>
 </html>
@@ -55,18 +78,18 @@ const { title, description = 'Global Airport Database - Find airports worldwide 
   html {
     font-family: system-ui, sans-serif;
   }
-  
+
   body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
   }
-  
+
   main {
     flex: 1;
   }
 </style>
 
 <script>
-  import '../styles/global.css';
+  import "../styles/global.css";
 </script>

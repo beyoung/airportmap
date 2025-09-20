@@ -393,4 +393,28 @@ export class AirportDatabase {
     
     return results.results || [];
   }
+
+  /**
+   * Get airports for sitemap generation (sequential pagination without bounds filtering)
+   */
+  async getAirportsForSitemap({
+    limit = 8000,
+    offset = 0
+  }: {
+    limit?: number;
+    offset?: number;
+  }): Promise<Airport[]> {
+    const query = `
+      SELECT *
+      FROM airport
+      ORDER BY id
+      LIMIT ? OFFSET ?
+    `;
+    
+    const results = await this.db.prepare(query)
+      .bind(limit, offset)
+      .all();
+    
+    return results.results || [];
+  }
 }

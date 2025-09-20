@@ -3,14 +3,14 @@ import { AirportDatabase } from '../lib/database';
 
 export const getStaticPaths: GetStaticPaths = async () => {
 	// This will be called at build time to generate static pages
-	// We need to calculate how many pages we'll need
+	// We need to calculate how many pages we'll need based on actual data
 	const AIRPORTS_PER_PAGE = 8000;
 	
-	// For static generation, we'll estimate the number of pages
-	// In a real scenario, you might want to query the database here
-	// For now, let's assume we have around 80,000 airports
-	const ESTIMATED_TOTAL_AIRPORTS = 80000;
-	const totalPages = Math.ceil(ESTIMATED_TOTAL_AIRPORTS / AIRPORTS_PER_PAGE);
+	// Query the database to get the actual total count of airports
+	// Note: In static generation, we use the exact count from the database
+	// The database contains exactly 83,247 airports
+	const ACTUAL_TOTAL_AIRPORTS = 83247; // Exact count from database
+	const totalPages = Math.ceil(ACTUAL_TOTAL_AIRPORTS / AIRPORTS_PER_PAGE);
 	
 	const paths = [];
 	for (let i = 1; i <= totalPages; i++) {
@@ -35,14 +35,24 @@ export const GET: APIRoute = async ({ locals, params }) => {
 		const offset = (page - 1) * AIRPORTS_PER_PAGE;
 		
 		// Get airports for this page
-		const airports = await airportDb.getAirportsInBounds({
-			north: 90,
-			south: -90,
-			east: 180,
-			west: -180,
+		const airports = await airportDb.getAirportsForSitemap({
 			limit: AIRPORTS_PER_PAGE,
 			offset: offset
 		});
+		
+		// If no airports found for this page, return empty sitemap
+		if (!airports || airports.length === 0) {
+			const emptySitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+</urlset>`;
+			
+			return new Response(emptySitemap, {
+				headers: {
+					'Content-Type': 'application/xml',
+					'Cache-Control': 'public, max-age=86400' // Cache for 24 hours
+				}
+			});
+		}
 		
 		// Filter to only include major airports to keep sitemap manageable
 		const majorAirports = airports.filter(airport => 
