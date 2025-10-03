@@ -44,6 +44,13 @@ export const GET: APIRoute = async ({ locals }) => {
 	</sitemap>
 `;
 		
+		// Add blog sitemap
+		sitemap += `	<sitemap>
+		<loc>${baseUrl}/sitemap-blog.xml</loc>
+		<lastmod>${currentDate}</lastmod>
+	</sitemap>
+`;
+		
 		// Add airport sitemaps (one for each page)
 		for (let i = 1; i <= totalAirportPages; i++) {
 			sitemap += `	<sitemap>
