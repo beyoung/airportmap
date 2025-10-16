@@ -5,9 +5,9 @@
  */
 ---
 
-<div id="map" class="map-container"></div>
-<div id="map-loading" class="map-loading">
-  <div class="loading-spinner"></div>
+<div id="map" class="w-full h-[600px] relative"></div>
+<div id="map-loading" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[1000] text-center bg-white/90 p-8 rounded-lg shadow-lg">
+  <div class="w-8 h-8 border-4 border-gray-300 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
   <p>Loading map...</p>
 </div>
 
@@ -68,6 +68,7 @@
       attribution: "© ayamap",
       minzoom: 0,
       maxzoom: 4, // 与PMTiles数据的maxzoom保持一致
+      promoteId: "ident" // Use ident field as feature ID for feature-state
     });
 
     // Add airport points layer
@@ -77,41 +78,124 @@
       source: "airports",
       "source-layer": "airports",
       paint: {
-        "circle-color": "#08ff18",
+        "circle-color": [
+          "match",
+          ["get", "type"],
+          "large_airport", "#ef4444",
+          "medium_airport", "#f59e0b",
+          "small_airport", "#10b981",
+          "heliport", "#3b82f6",
+          "seaplane_base", "#8b5cf6",
+          "balloonport", "#6366f1",
+          "#9ca3af"
+        ],
         "circle-radius": [
           "interpolate",
           ["linear"],
           ["zoom"],
-          0,
-          0.5, // 在缩放级别0时，圆点半径为1
-          2,
-          0.6, // 在缩放级别2时，圆点半径为2
-          4,
-          0.8, // 在缩放级别4时，圆点半径为4
-          8,
-          1.2, // 在缩放级别8时，圆点半径为6
-          12,
-          1.6, // 在缩放级别12时，圆点半径为8
+          0, ["*", 0.5, [
+            "match",
+            ["get", "type"],
+            "large_airport", 6,
+            "medium_airport", 4.0,
+            "small_airport", 2,
+            "heliport", 1.2,
+            "seaplane_base", 1.2,
+            "balloonport", 1.0,
+            1.0
+          ]],
+          2, ["*", 0.6, [
+            "match",
+            ["get", "type"],
+            "large_airport", 6,
+            "medium_airport", 4.0,
+            "small_airport", 2,
+            "heliport", 1.2,
+            "seaplane_base", 1.2,
+            "balloonport", 1.0,
+            1.0
+          ]],
+          4, ["*", 0.8, [
+            "match",
+            ["get", "type"],
+            "large_airport", 6,
+            "medium_airport", 4.0,
+            "small_airport", 2,
+            "heliport", 1.2,
+            "seaplane_base", 1.2,
+            "balloonport", 1.0,
+            1.0
+          ]],
+          8, ["*", 1.2, [
+            "match",
+            ["get", "type"],
+            "large_airport", 6,
+            "medium_airport", 4.0,
+            "small_airport", 2,
+            "heliport", 1.2,
+            "seaplane_base", 1.2,
+            "balloonport", 1.0,
+            1.0
+          ]],
+          12, ["*", 1.6, [
+            "match",
+            ["get", "type"],
+           "large_airport", 6,
+            "medium_airport", 4.0,
+            "small_airport", 2,
+            "heliport", 1.2,
+            "seaplane_base", 1.2,
+            "balloonport", 1.0,
+            1.0
+          ]]
         ],
         "circle-stroke-width": [
           "interpolate",
           ["linear"],
           ["zoom"],
-          0,
-          0.5, // 在缩放级别0时，边框宽度为1
-          2,
-          0.6, // 在缩放级别2时，边框宽度为2
-          4,
-          0.8, // 在缩放级别4时，边框宽度为3
-          8,
-          1.2, // 在缩放级别8时，边框宽度为4
-          12,
-          1.6, // 在缩放级别12时，边框宽度为5
+          0, [
+            "case",
+            ["boolean", ["feature-state", "hover"], false],
+            2.5,
+            0.5
+          ],
+          2, [
+            "case",
+            ["boolean", ["feature-state", "hover"], false],
+            3.0,
+            0.6
+          ],
+          4, [
+            "case",
+            ["boolean", ["feature-state", "hover"], false],
+            3.5,
+            0.8
+          ],
+          8, [
+            "case",
+            ["boolean", ["feature-state", "hover"], false],
+            4.0,
+            1.2
+          ],
+          12, [
+            "case",
+            ["boolean", ["feature-state", "hover"], false],
+            4.5,
+            1.6
+          ]
         ],
-        "circle-stroke-color": "#08ff18",
+        "circle-stroke-color": "#ffffff",
+        "circle-opacity": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          0, 0.85,
+          6, 0.92,
+          12, 1.0
+        ],
       },
       minzoom: 0,
-      maxzoom: 14, // 允许图层在更高缩放级别显示，使用最后一级的瓦片数据
+      maxzoom: 14,
     });
 
     // Add airport labels layer
@@ -134,10 +218,28 @@
           "interpolate",
           ["linear"],
           ["zoom"],
-          8,
-          12, // 在缩放级别8时，字体大小为12
-          12,
-          14, // 在缩放级别12时，字体大小为14
+          6, [
+            "match",
+            ["get", "type"],
+            "large_airport", 14,
+            "medium_airport", 12,
+            "small_airport", 11,
+            "heliport", 10,
+            "seaplane_base", 10,
+            "balloonport", 10,
+            10
+          ],
+          12, [
+            "match",
+            ["get", "type"],
+            "large_airport", 18,
+            "medium_airport", 16,
+            "small_airport", 14,
+            "heliport", 13,
+            "seaplane_base", 13,
+            "balloonport", 13,
+            13
+          ]
         ],
         "text-offset": [0, 1.5], // 文字偏移，避免与圆点重叠
         "text-anchor": "top",
@@ -162,95 +264,257 @@
       maxzoom: 14, // 允许在更高缩放级别显示
     });
 
-    // Add click handler for airports
-    map.on("click", "airports-points", (e) => {
-      if (e.features && e.features.length > 0) {
-        const geometry = e.features[0].geometry as any;
-        const coordinates = geometry.coordinates.slice();
-        const properties = e.features[0].properties;
+    // Hover popup for airports
+    type AirportType =
+      | "large_airport"
+      | "medium_airport"
+      | "small_airport"
+      | "heliport"
+      | "seaplane_base"
+      | "balloonport";
 
-        // Create popup content
-        const popupContent = `
-          <div class="p-3">
-            <h3 class="font-bold text-lg mb-2">${properties?.name || properties?.ident || "Unknown Airport"}</h3>
-            <div class="space-y-1 text-sm mb-3">
-              <p><strong>Code:</strong> ${properties?.ident || "N/A"}</p>
-              <p><strong>Type:</strong> ${properties?.type?.replace("_", " ") || "N/A"}</p>
-              <p><strong>Location:</strong> ${properties?.iso_region || "Unknown"}, ${properties?.iso_country || "Unknown"}</p>
-              ${properties?.elevation_ft ? `<p><strong>Elevation:</strong> ${properties.elevation_ft} ft</p>` : ""}
-            </div>
-            <div class="flex gap-2">
-              <a href="/airports/${properties?.ident}" target="_blank" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors">
-                View Details
-              </a>
-              ${
-                properties?.iso_country
-                  ? `<a href="/countries/${properties.iso_country.toLowerCase()}"  target="_blank" class="bg-gray-100 text-gray-700 px-3 py-1 rounded text-sm hover:bg-gray-200 transition-colors">
-                Country Airports
-              </a>`
-                  : ""
-              }
-            </div>
-          </div>
-        `;
+    const formatType = (t: string | undefined): string => {
+      if (!t) return "Unknown";
+      return String(t)
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+    };
 
-        new maplibregl.Popup()
-          .setLngLat(coordinates)
-          .setHTML(popupContent)
-          .addTo(map);
-      }
+    const typeColors: Record<AirportType | "default", string> = {
+      large_airport: "#ef4444", // red
+      medium_airport: "#f59e0b", // amber
+      small_airport: "#10b981", // green
+      heliport: "#3b82f6", // blue
+      seaplane_base: "#8b5cf6", // violet
+      balloonport: "#6366f1", // indigo
+      default: "#9ca3af", // gray
+    };
+
+    const hoverPopup = new maplibregl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      offset: 12,
+      className: "max-w-80 [&_.maplibregl-popup-content]:p-0 [&_.maplibregl-popup-content]:rounded-xl [&_.maplibregl-popup-content]:shadow-xl [&_.maplibregl-popup-content]:backdrop-blur-sm [&_.maplibregl-popup-content]:border [&_.maplibregl-popup-content]:border-white/20 [&_.maplibregl-popup-content]:overflow-hidden [&_.maplibregl-popup-content]:w-72 [&_.maplibregl-popup-content]:max-w-72 [&_.maplibregl-popup-content]:min-w-72 [&_.maplibregl-popup-tip]:border-t-white/95 [&_.maplibregl-popup-tip]:border-b-white/95",
     });
 
-    // Change cursor on hover
+    let hoveredAirportId: string | null = null;
+
+    // Unified popup content generator with compact Tailwind styling
+    function createAirportPopupContent(properties: any, typeColors: Record<string, string>) {
+      const p = properties || {};
+      const name = p?.name || p?.ident || "Unknown Airport";
+      const typeLabel = formatType(p?.type as string | undefined);
+      const typeKey: AirportType | "default" = (p?.type as AirportType) ?? "default";
+      const badgeColor = typeColors[typeKey];
+      
+      // Get airport icon based on type
+      const getAirportIcon = (type: string) => {
+        switch (type) {
+          case 'large_airport': return '🛫';
+          case 'medium_airport': return '✈️';
+          case 'small_airport': return '🛩️';
+          case 'heliport': return '🚁';
+          case 'seaplane_base': return '🛥️';
+          case 'balloonport': return '🎈';
+          default: return '✈️';
+        }
+      };
+
+      return `
+        <div class="airport-card-modern bg-gradient-to-br from-white via-slate-50 to-slate-100 rounded-xl shadow-xl border border-white/20 backdrop-blur-sm overflow-hidden w-72" 
+             data-airport-type="${p?.type || 'default'}" 
+             style="--type-color:${badgeColor}">
+          
+          <!-- Compact Header -->
+          <div class="relative bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 px-4 py-3">
+            <!-- Decorative top border -->
+            <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-current to-transparent opacity-60" 
+                 style="color: ${badgeColor}"></div>
+            
+            <div class="relative flex items-center gap-3">
+              <!-- Compact Airport icon -->
+              <div class="flex-shrink-0 text-2xl">
+                ${getAirportIcon(p?.type)}
+              </div>
+              
+              <!-- Title section -->
+              <div class="flex-1 min-w-0">
+                <!-- Airport name with word wrap -->
+                <h3 class="text-lg font-bold text-white leading-tight tracking-tight break-words">
+                  ${name}
+                </h3>
+                
+                <!-- Compact Type badge -->
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wide text-white mt-1" 
+                      style="background: ${badgeColor};">
+                  ${typeLabel}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Compact Card body -->
+          <div class="p-4 space-y-3">
+            <!-- Airport code -->
+            <div class="flex items-center gap-3 p-3 bg-white/60 backdrop-blur-sm rounded-lg border border-white/40 hover:bg-white/70 transition-colors duration-200">
+              <div class="flex-shrink-0 w-6 h-6 rounded-md bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-xs">
+                🏷️
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">代码</div>
+                <div class="text-sm font-bold text-slate-800">${p?.ident || "N/A"}</div>
+              </div>
+            </div>
+
+            <!-- Location -->
+            <div class="flex items-center gap-3 p-3 bg-white/60 backdrop-blur-sm rounded-lg border border-white/40 hover:bg-white/70 transition-colors duration-200">
+              <div class="flex-shrink-0 w-6 h-6 rounded-md bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-xs">
+                📍
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">位置</div>
+                <div class="text-sm font-bold text-slate-800 truncate">${p?.iso_region || "Unknown"}, ${p?.iso_country || "Unknown"}</div>
+              </div>
+            </div>
+
+            <!-- Elevation (conditional) -->
+            ${p?.elevation_ft ? `
+              <div class="flex items-center gap-3 p-3 bg-white/60 backdrop-blur-sm rounded-lg border border-white/40 hover:bg-white/70 transition-colors duration-200">
+                <div class="flex-shrink-0 w-6 h-6 rounded-md bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-xs">
+                  ⛰️
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">海拔</div>
+                  <div class="text-sm font-bold text-slate-800">${p.elevation_ft} ft</div>
+                </div>
+              </div>
+            ` : ""}
+          </div>
+
+          <!-- Compact Action buttons -->
+          <div class="px-4 pb-4 flex gap-2">
+            <a href="/airports/${p?.ident}" target="_blank" 
+               class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-medium text-sm text-white shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
+               style="background: linear-gradient(135deg, ${badgeColor}, color-mix(in srgb, ${badgeColor} 85%, black));">
+              <span class="text-sm">👁️</span>
+              <span>查看详情</span>
+            </a>
+            
+            ${p?.iso_country ? `
+              <a href="/countries/${String(p.iso_country).toLowerCase()}" target="_blank" 
+                 class="flex-shrink-0 inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg font-medium text-sm text-slate-700 bg-white/80 hover:bg-white shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 border border-slate-200/50">
+                <span class="text-sm">🌍</span>
+                <span>${p.iso_country}</span>
+              </a>
+            ` : ""}
+          </div>
+        </div>
+      `;
+    }
+
     map.on("mouseenter", "airports-points", () => {
       map.getCanvas().style.cursor = "pointer";
     });
+
+    map.on("mousemove", "airports-points", (e) => {
+      if (e.features && e.features.length > 0) {
+        const feature = e.features[0];
+        const p = feature.properties;
+
+        // Only close click popup if we're hovering over a different airport
+        if (clickPopup.isOpen() && hoveredAirportId !== feature.id) {
+          clickPopup.remove();
+          // Also clear the selected airport highlight
+          (map.getSource("selected-airport") as any).setData({
+            type: "FeatureCollection",
+            features: [],
+          });
+        }
+
+        // Only show hover popup if there's no click popup open, or if we're hovering over a different airport
+        if (!clickPopup.isOpen() || hoveredAirportId !== feature.id) {
+          if (hoveredAirportId !== feature.id) {
+            hoveredAirportId = feature.id as string;
+
+            hoverPopup
+              .setLngLat(e.lngLat)
+              .setHTML(createAirportPopupContent(p, typeColors))
+              .addTo(map);
+          } else {
+            // Update popup position even for the same airport
+            hoverPopup.setLngLat(e.lngLat);
+          }
+        }
+      }
+    });
+
     map.on("mouseleave", "airports-points", () => {
       map.getCanvas().style.cursor = "";
+      hoveredAirportId = null;
+      hoverPopup.remove();
     });
+
+    // Sticky popup & selected highlight
+    map.addSource("selected-airport", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+    map.addLayer({
+      id: "selected-airport-ring",
+      type: "circle",
+      source: "selected-airport",
+      paint: {
+        "circle-color": "rgba(255,255,255,0)",
+        "circle-radius": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          6, 6,
+          10, 10,
+          14, 14
+        ],
+        "circle-stroke-color": [
+          "match",
+          ["get", "type"],
+          "large_airport", "#ef4444",
+          "medium_airport", "#f59e0b",
+          "small_airport", "#10b981",
+          "heliport", "#3b82f6",
+          "seaplane_base", "#8b5cf6",
+          "balloonport", "#6366f1",
+          "#9ca3af"
+        ],
+        "circle-stroke-width": 2.5,
+      },
+    });
+
+    const clickPopup = new maplibregl.Popup({
+      closeButton: true,
+      closeOnClick: false,
+      offset: 14,
+      className: "max-w-80 [&_.maplibregl-popup-content]:p-0 [&_.maplibregl-popup-content]:rounded-xl [&_.maplibregl-popup-content]:shadow-xl [&_.maplibregl-popup-content]:backdrop-blur-sm [&_.maplibregl-popup-content]:border [&_.maplibregl-popup-content]:border-white/20 [&_.maplibregl-popup-content]:overflow-hidden [&_.maplibregl-popup-content]:w-72 [&_.maplibregl-popup-content]:max-w-72 [&_.maplibregl-popup-content]:min-w-72 [&_.maplibregl-popup-tip]:border-t-white/95 [&_.maplibregl-popup-tip]:border-b-white/95",
+    });
+
+    map.on("click", "airports-points", (e) => {
+      if (!e.features || e.features.length === 0) return;
+      const f = e.features[0];
+      const geometry = f.geometry as any;
+      const coordinates = geometry.coordinates.slice();
+      const p: any = f.properties || {};
+
+      // Remove hover popup when clicking to avoid duplicate popups
+      hoverPopup.remove();
+
+      (map.getSource("selected-airport") as any).setData({
+        type: "FeatureCollection",
+        features: [{ type: "Feature", geometry, properties: { type: p?.type } }],
+      });
+      clickPopup.setLngLat(coordinates).setHTML(createAirportPopupContent(p, typeColors)).addTo(map);
+    });
+
+
   });
 
   // Export map instance for external use
   (window as any).airportMap = map;
 </script>
-
-<style>
-  .map-container {
-    width: 100%;
-    height: 600px;
-    position: relative;
-  }
-
-  .map-loading {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 1000;
-    text-align: center;
-    background: rgba(255, 255, 255, 0.9);
-    padding: 2rem;
-    border-radius: 0.5rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  }
-
-  .loading-spinner {
-    width: 2rem;
-    height: 2rem;
-    border: 3px solid #e5e7eb;
-    border-top: 3px solid #3b82f6;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 1rem;
-  }
-
-  @keyframes spin {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
-      transform: rotate(360deg);
-    }
-  }
-  
-</style>
