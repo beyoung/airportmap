@@ -25,7 +25,7 @@
         container: "map",
         style: {
             version: 8,
-            glyphs: "https://api.maptiler.com/fonts/{fontstack}/{range}.pbf?key=48F3wFYg8K0uzswJ8cdr", // 添加字体支持
+            glyphs: "https://api.maptiler.com/fonts/{fontstack}/{range}.pbf?key=48F3wFYg8K0uzswJ8cdr", // Add font support
             sources: {
                 "raster-tiles": {
                     type: "raster",
@@ -72,7 +72,7 @@
             tiles: ["https://tiles.ayamap.com/airport/{z}/{x}/{y}.mvt"],
             attribution: "© ayamap",
             minzoom: 0,
-            maxzoom: 4, // 与PMTiles数据的maxzoom保持一致
+            maxzoom: 4, // Keep consistent with PMTiles data maxzoom
             promoteId: "ident", // Use ident field as feature ID for feature-state
         });
 
@@ -282,10 +282,10 @@
                 "text-field": [
                     "case",
                     ["has", "name"],
-                    ["get", "name"], // 优先使用name字段
+                    ["get", "name"], // Prefer using name field
                     ["has", "ident"],
-                    ["get", "ident"], // 如果没有name则使用ident
-                    "", // 都没有则为空
+                    ["get", "ident"], // Use ident if name is not available
+                    "", // Empty if neither exists
                 ],
                 "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"],
                 "text-size": [
@@ -329,9 +329,9 @@
                         13,
                     ],
                 ],
-                "text-offset": [0, 1.5], // 文字偏移，避免与圆点重叠
+                "text-offset": [0, 1.5], // Text offset to avoid overlapping with circle
                 "text-anchor": "top",
-                "text-allow-overlap": false, // 避免文字重叠
+                "text-allow-overlap": false, // Avoid text overlapping
                 "text-optional": true,
             },
             paint: {
@@ -343,13 +343,13 @@
                     ["linear"],
                     ["zoom"],
                     8,
-                    0.8, // 在缩放级别4时，透明度为0.8
+                    0.8, // Opacity 0.8 at zoom level 4
                     10,
-                    1.0, // 在缩放级别8及以上时，完全不透明
+                    1.0, // Fully opaque at zoom level 8 and above
                 ],
             },
-            minzoom: 6, // 从缩放级别3开始显示文字，避免低缩放时过于拥挤
-            maxzoom: 14, // 允许在更高缩放级别显示
+            minzoom: 6, // Start showing text from zoom level 3 to avoid crowding at low zoom
+            maxzoom: 14, // Allow display at higher zoom levels
         });
 
         // Hover popup for airports
@@ -461,7 +461,7 @@
                 🏷️
               </div>
               <div class="flex-1 min-w-0">
-                <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">代码</div>
+                <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Code</div>
                 <div class="text-sm font-bold text-slate-800">
                   ${p?.iata_code ? `IATA: ${p.iata_code}` : ""}
                   ${p?.iata_code && p?.icao_code ? " | " : ""}
@@ -477,7 +477,7 @@
                 📍
               </div>
               <div class="flex-1 min-w-0">
-                <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">位置</div>
+                <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Location</div>
                 <div class="text-sm font-bold text-slate-800 truncate">${p?.iso_region || "Unknown"}, ${p?.iso_country || "Unknown"}</div>
               </div>
             </div>
@@ -491,7 +491,7 @@
                   ⛰️
                 </div>
                 <div class="flex-1 min-w-0">
-                  <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">海拔</div>
+                  <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Elevation</div>
                   <div class="text-sm font-bold text-slate-800">${p.elevation_ft} ft</div>
                 </div>
               </div>
@@ -506,7 +506,7 @@
                class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-medium text-sm text-white shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
                style="background: linear-gradient(135deg, ${badgeColor}, color-mix(in srgb, ${badgeColor} 85%, black));">
               <span class="text-sm">👁️</span>
-              <span>查看详情</span>
+              <span>View Details</span>
             </a>
 
             ${
