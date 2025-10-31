@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS airport (
     home_link TEXT,
     wikipedia_link TEXT,
     keywords TEXT,
+    destinations TEXT,
     address_id INTEGER,
     FOREIGN KEY (address_id) REFERENCES address(id)
 );

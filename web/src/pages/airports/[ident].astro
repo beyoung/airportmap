@@ -30,7 +30,7 @@ let nearbyAirports: Array<{ident: string, name: string | null, municipality: str
 if (airportData.latitude_deg && airportData.longitude_deg) {
   const latDelta = 100 / 111; // 100km radius
   const lngDelta = 100 / (111 * Math.cos(airportData.latitude_deg * Math.PI / 180));
-  
+
   const bounds = {
     north: airportData.latitude_deg + latDelta,
     south: airportData.latitude_deg - latDelta,
@@ -38,22 +38,22 @@ if (airportData.latitude_deg && airportData.longitude_deg) {
     west: airportData.longitude_deg - lngDelta,
     limit: 3
   };
-  
+
   const allNearby = await airportDb.getAirportsInBounds(bounds);
-  
+
   // Calculate distances and filter
   const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLng = (lng2 - lng1) * Math.PI / 180;
-    const a = 
+    const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
       Math.sin(dLng / 2) * Math.sin(dLng / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   };
-  
+
   nearbyAirports = allNearby
     .filter(airport => airport.ident !== airportData.ident && airport.latitude_deg && airport.longitude_deg)
     .map(airport => ({
@@ -79,15 +79,15 @@ if (airportData.wikipedia_link) {
       const pageTitle = decodeURIComponent(match[1]);
       const langMatch = airportData.wikipedia_link.match(/\/\/(\w+)\.wikipedia\.org/);
       const language = langMatch ? langMatch[1] : 'en';
-      
+
       const apiUrl = `https://${language}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle)}`;
-      
+
       const response = await fetch(apiUrl, {
         headers: {
           'User-Agent': 'AyaMap-Airports/1.0 (https://airport.ayamap.com)'
         }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         wikipediaInfo = {
@@ -107,8 +107,11 @@ if (airportData.wikipedia_link) {
 // Prepare keywords
 const keywords = airportData.keywords ? airportData.keywords.split(',').map(k => k.trim()).filter(k => k) : [];
 
-const title = `${airportData.name || `${ident.toUpperCase()} Airport`} - AyaMap Airports`;
-const description = `Detailed information about ${airportData.name || ident.toUpperCase()} airport in ${airportData.municipality || 'Unknown City'}, ${airportData.iso_country || 'Unknown Country'}.`;
+const title = `${airportData.name || `${ident.toUpperCase()} Airport`} - Live Flights & Destinations - AyaMap`;
+const iataCode = airportData.iata_code ? `(${airportData.iata_code})` : '';
+const icaoCode = airportData.icao_code ? `ICAO: ${airportData.icao_code}` : '';
+const codes = [iataCode, icaoCode].filter(c => c).join(' | ');
+const description = `${airportData.name || ident.toUpperCase()} ${codes} in ${airportData.municipality || 'Unknown City'}, ${airportData.iso_country || 'Unknown Country'}. Check real-time flight departures and arrivals, view live flight status, and explore direct flight destinations from this airport.`;
 const canonicalUrl = `https://airport.ayamap.com/airports/${ident}`;
 
 // Helper function for type badges
@@ -130,18 +133,17 @@ function getTypeBadge(type: string | null) {
 }
 ---
 
-<Layout title={title}>
+<Layout title={title} description={description}>
 	<!-- SEO Meta Tags -->
-	<meta name="description" content={description} slot="head" />
-	<meta name="keywords" content={`airport ${ident}, ${ident} airport info, aviation, flight information, airport details`} slot="head" />
+	<meta name="keywords" content={`${ident} airport, ${ident} live flights, ${ident} departures, ${ident} arrivals, ${ident} direct flights, real-time flight status, airport information`} slot="head" />
 	<link rel="canonical" href={canonicalUrl} slot="head" />
-	
+
 	<!-- Open Graph Meta Tags -->
 	<meta property="og:title" content={title} slot="head" />
 	<meta property="og:description" content={description} slot="head" />
 	<meta property="og:url" content={canonicalUrl} slot="head" />
 	<meta property="og:type" content="place" slot="head" />
-	
+
 	<!-- Structured Data -->
 	<script type="application/ld+json" slot="head">
 	{
@@ -190,24 +192,28 @@ function getTypeBadge(type: string | null) {
 							{airportData.municipality || 'Unknown City'}, {airportData.iso_country || 'Unknown Country'}
 						</p>
 					</div>
-			
+
 				</div>
 			</div>
 		</section>
 
 		<!-- Airport Details Section -->
 		<section class="py-8">
-			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-				<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+			<div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+				<div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
 					<!-- Main Information -->
-					<div class="lg:col-span-2 space-y-6">
+					<div class="lg:col-span-3 space-y-6">
 						<!-- Basic Info Card -->
 						<div class="bg-white rounded-lg shadow-sm p-6">
 							<h2 class="text-2xl font-bold text-gray-900 mb-4">Basic Information</h2>
 							<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 								<div>
-									<label class="block text-sm font-medium text-gray-500 mb-1">Airport Code</label>
-									<p class="text-lg font-semibold text-gray-900">{airportData.ident}</p>
+									<label class="block text-sm font-medium text-gray-500 mb-1">ICAO Code</label>
+									<p class="text-lg font-semibold text-gray-900">{airportData.icao_code || '-'}</p>
+								</div>
+								<div>
+									<label class="block text-sm font-medium text-gray-500 mb-1">IATA Code</label>
+									<p class="text-lg font-semibold text-gray-900">{airportData.iata_code || '-'}</p>
 								</div>
 								<div>
 									<label class="block text-sm font-medium text-gray-500 mb-1">Type</label>
@@ -247,7 +253,7 @@ function getTypeBadge(type: string | null) {
 							</div>
 							<!-- Mini Map -->
 							{airportData.latitude_deg && airportData.longitude_deg ? (
-								<MiniMap 
+								<MiniMap
 									latitude={airportData.latitude_deg}
 									longitude={airportData.longitude_deg}
 									name={airportData.name || `${airportData.ident} Airport`}
@@ -262,6 +268,21 @@ function getTypeBadge(type: string | null) {
 							)}
 						</div>
 
+						<!-- Flight Information -->
+						{airportData.iata_code && (
+							<div class="bg-white rounded-lg shadow-sm p-6">
+								<h2 class="text-2xl font-bold text-gray-900 mb-4">✈️ Flight Information</h2>
+								<div class="avionio-widget">
+									<iframe height="800px" frameborder="0" style="border:0; width: 100%; margin:0; padding:0;" src={`https://www.avionio.com/widget/en/${airportData.iata_code.toLowerCase()}/departures?style=2`}></iframe>
+									<div style="font-size:12px; width: 100%; text-align: center;">
+										<a style="text-decoration:none; color:#333;" href={`https://www.avionio.com/en/airport/${airportData.iata_code.toLowerCase()}/departures`} title={`${airportData.iata_code} Departures`} target="_blank">{airportData.iata_code} Departures</a>
+										<span style="color: #FD6150;">♥</span>
+										<a style="text-decoration:none; color:#333;" href="https://www.avionio.com/" target="_blank" title="Airport arrivals and departures worldwide">Avionio.com</a>
+									</div>
+								</div>
+							</div>
+						)}
+
 						<!-- Wikipedia Information -->
 						{wikipediaInfo && (
 							<div class="bg-white rounded-lg shadow-sm p-6">
@@ -274,8 +295,8 @@ function getTypeBadge(type: string | null) {
 									</div>
 									{wikipediaInfo.thumbnail && (
 										<div class="flex-shrink-0 w-full md:w-48">
-											<img 
-												src={wikipediaInfo.thumbnail} 
+											<img
+												src={wikipediaInfo.thumbnail}
 												alt={wikipediaInfo.title}
 												class="w-full h-auto rounded-lg shadow-md object-cover"
 												loading="lazy"
@@ -285,9 +306,9 @@ function getTypeBadge(type: string | null) {
 								</div>
 							</div>
 								<div class="mt-4 pt-4 border-t border-gray-200">
-									<a 
-										href={wikipediaInfo.url} 
-										target="_blank" 
+									<a
+										href={wikipediaInfo.url}
+										target="_blank"
 										rel="noopener noreferrer"
 										class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium"
 									>
@@ -296,6 +317,48 @@ function getTypeBadge(type: string | null) {
 											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
 										</svg>
 									</a>
+								</div>
+							</div>
+						)}
+
+						<!-- Direct Flight Destinations -->
+						{airportData.destinationsData && airportData.destinationsData.direct_flights && airportData.destinationsData.direct_flights.length > 0 && (
+							<div class="bg-white rounded-lg shadow-sm p-6">
+								<h2 class="text-2xl font-bold text-gray-900 mb-4">✈️ Direct Flight Destinations</h2>
+								<p class="text-sm text-gray-600 mb-4">
+									From {airportData.destinationsData.departure_airport.name} ({airportData.destinationsData.departure_airport.iata})
+								</p>
+								<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+									{airportData.destinationsData.direct_flights.map((destination) => (
+										<div class="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-md transition-all">
+											<h3 class="font-semibold text-gray-900 mb-2 flex items-center">
+												<span class="text-lg">📍</span>
+												<span class="ml-2">{destination.city}</span>
+											</h3>
+											<div class="space-y-2">
+												{destination.airports.map((airport) => (
+													<a
+														href={`/airports/${airport.icao || airport.iata}`}
+														class="block p-2 bg-gray-50 rounded hover:bg-blue-50 transition-colors"
+													>
+														<div class="flex items-center justify-between">
+															<div class="flex-1 min-w-0">
+																<p class="text-sm font-medium text-gray-900 truncate">
+																	{airport.name}
+																</p>
+																<p class="text-xs text-gray-500">
+																	{airport.iata} / {airport.icao}
+																</p>
+															</div>
+															<svg class="w-4 h-4 text-gray-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+															</svg>
+														</div>
+													</a>
+												))}
+											</div>
+										</div>
+									))}
 								</div>
 							</div>
 						)}
@@ -313,12 +376,16 @@ function getTypeBadge(type: string | null) {
 								<a id="google-maps-link" href={`https://www.google.com/maps?q=${airportData.latitude_deg},${airportData.longitude_deg}`} target="_blank" rel="noopener noreferrer" class="block w-full bg-green-50 text-green-700 px-4 py-2 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium text-center">
 									🗺️ Open in Google Maps
 								</a>
-								<a id="home-link" href="#" target="_blank" class="hidden w-full bg-purple-50 text-purple-700 px-4 py-2 rounded-lg hover:bg-purple-100 transition-colors text-sm font-medium text-center">
-									🏠 Official Website
-								</a>
-								<a id="wikipedia-link" href="#" target="_blank" class="hidden w-full bg-orange-50 text-orange-700 px-4 py-2 rounded-lg hover:bg-orange-100 transition-colors text-sm font-medium text-center">
-									📖 Wikipedia Article
-								</a>
+								{airportData.home_link && (
+									<a href={airportData.home_link} target="_blank" rel="noopener noreferrer" class="block w-full bg-purple-50 text-purple-700 px-4 py-2 rounded-lg hover:bg-purple-100 transition-colors text-sm font-medium text-center">
+										🏠 Official Website
+									</a>
+								)}
+								{airportData.wikipedia_link && (
+									<a href={airportData.wikipedia_link} target="_blank" rel="noopener noreferrer" class="block w-full bg-orange-50 text-orange-700 px-4 py-2 rounded-lg hover:bg-orange-100 transition-colors text-sm font-medium text-center">
+										📖 Wikipedia Article
+									</a>
+								)}
 							</div>
 						</div>
 
@@ -388,7 +455,7 @@ function getTypeBadge(type: string | null) {
 	// Copy coordinates to clipboard
 	async function copyCoordinates() {
 		if (!airportData || !airportData.latitude_deg || !airportData.longitude_deg) return;
-		
+
 		const coordinates = `${airportData.latitude_deg}, ${airportData.longitude_deg}`;
 		try {
 			await navigator.clipboard.writeText(coordinates);

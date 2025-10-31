@@ -19,23 +19,22 @@ const stats = {
 	countries: countries.length
 };
 
-const title = 'Explore airports by countries - AyaMap Airports';
-const description = 'Browse airports by country. Explore aviation infrastructure across different nations and territories worldwide.';
+const title = 'Airports by Country - Live Flights & Direct Destinations - AyaMap';
+const description = 'Browse airports by country and territory. Check real-time flight departures and arrivals, view live flight status, and discover direct flight destinations from airports worldwide.';
 const canonicalUrl = 'https://airport.ayamap.com/countries/';
 ---
 
-<Layout title={title}>
+<Layout title={title} description={description}>
 	<!-- SEO Meta Tags -->
-	<meta name="description" content={description} slot="head" />
-	<meta name="keywords" content="airports by country, world airports, aviation, international airports, country airports" slot="head" />
+	<meta name="keywords" content="airports by country, live flights, flight departures, flight arrivals, real-time flight status, direct flights, world airports, aviation, international airports" slot="head" />
 	<link rel="canonical" href={canonicalUrl} slot="head" />
-	
+
 	<!-- Open Graph Meta Tags -->
 	<meta property="og:title" content={title} slot="head" />
 	<meta property="og:description" content={description} slot="head" />
 	<meta property="og:url" content={canonicalUrl} slot="head" />
 	<meta property="og:type" content="website" slot="head" />
-	
+
 	<!-- Structured Data -->
 	<script type="application/ld+json" slot="head">
 	{
@@ -77,7 +76,7 @@ const canonicalUrl = 'https://airport.ayamap.com/countries/';
 						Explore airports by country and discover aviation infrastructure worldwide
 					</p>
 				</div>
-				
+
 				<!-- Stats Section -->
 				<div class="mb-8">
 					<h2 class="text-2xl font-bold text-gray-900 mb-4 text-center">Global Aviation Statistics</h2>
@@ -112,9 +111,9 @@ const canonicalUrl = 'https://airport.ayamap.com/countries/';
 			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 				<div class="flex flex-col sm:flex-row gap-4 items-center justify-between">
 					<div class="flex-1 max-w-md">
-						<input 
-							type="text" 
-							id="country-search" 
+						<input
+							type="text"
+							id="country-search"
 							placeholder="Search countries..."
 							class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
 						/>
@@ -142,8 +141,8 @@ const canonicalUrl = 'https://airport.ayamap.com/countries/';
 				<!-- Countries List -->
 				<div id="countries-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 					{countries.map(country => (
-						<div class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6 country-card" 
-							 data-country={country.country} 
+						<div class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6 country-card"
+							 data-country={country.country}
 							 data-country-name={country.country_name || country.country}
 							 data-airport-count={country.airport_count}>
 							<div class="flex items-center justify-between mb-4">
@@ -179,8 +178,8 @@ const canonicalUrl = 'https://airport.ayamap.com/countries/';
 						</thead>
 						<tbody id="countries-table-body" class="bg-white divide-y divide-gray-200">
 							{countries.map(country => (
-								<tr class="hover:bg-gray-50 country-row" 
-									data-country={country.country} 
+								<tr class="hover:bg-gray-50 country-row"
+									data-country={country.country}
 									data-country-name={country.country_name || country.country}
 									data-airport-count={country.airport_count}>
 									<td class="px-6 py-4 whitespace-nowrap">
@@ -220,13 +219,13 @@ const canonicalUrl = 'https://airport.ayamap.com/countries/';
 	// Function to get country flag emoji
 	function getCountryFlag(countryCode: string): string {
 		if (!countryCode || countryCode.length !== 2) return '🏳️';
-		
+
 		// Convert country code to flag emoji
 		const codePoints = countryCode
 			.toUpperCase()
 			.split('')
 			.map(char => 127397 + char.charCodeAt(0));
-		
+
 		return String.fromCodePoint(...codePoints);
 	}
 
@@ -249,7 +248,7 @@ const canonicalUrl = 'https://airport.ayamap.com/countries/';
 	function sortCountries() {
 		const sortBy = sortSelect.value;
 		const { cards, rows } = getAllCountryElements();
-		
+
 		// Sort cards
 		const sortedCards = cards.sort((a, b) => {
 			if (sortBy === 'airports') {
@@ -262,7 +261,7 @@ const canonicalUrl = 'https://airport.ayamap.com/countries/';
 				return nameA.localeCompare(nameB);
 			}
 		});
-		
+
 		// Sort rows
 		const sortedRows = rows.sort((a, b) => {
 			if (sortBy === 'airports') {
@@ -275,7 +274,7 @@ const canonicalUrl = 'https://airport.ayamap.com/countries/';
 				return nameA.localeCompare(nameB);
 			}
 		});
-		
+
 		// Re-append sorted elements
 		sortedCards.forEach(card => countriesGrid.appendChild(card));
 		const tableBody = document.getElementById('countries-table-body')!;
@@ -286,14 +285,14 @@ const canonicalUrl = 'https://airport.ayamap.com/countries/';
 	function filterCountries() {
 		const query = countrySearch.value.toLowerCase().trim();
 		const { cards, rows } = getAllCountryElements();
-		
+
 		cards.forEach(card => {
 			const countryName = (card.dataset.countryName || '').toLowerCase();
 			const countryCode = (card.dataset.country || '').toLowerCase();
 			const matches = !query || countryName.includes(query) || countryCode.includes(query);
 			card.style.display = matches ? 'block' : 'none';
 		});
-		
+
 		rows.forEach(row => {
 			const countryName = (row.dataset.countryName || '').toLowerCase();
 			const countryCode = (row.dataset.country || '').toLowerCase();
@@ -305,7 +304,7 @@ const canonicalUrl = 'https://airport.ayamap.com/countries/';
 	// Toggle view
 	function toggleView() {
 		isGridView = !isGridView;
-		
+
 		if (isGridView) {
 			countriesGrid.classList.remove('hidden');
 			countriesTable.classList.add('hidden');

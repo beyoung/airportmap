@@ -1,24 +1,27 @@
 ---
-import Layout from '../../layouts/Layout.astro';
-import { AirportDatabase } from '../../lib/database';
+import Layout from "../../layouts/Layout.astro";
+import { AirportDatabase } from "../../lib/database";
 
-const title = 'Search & Filter all airports - AyaMap Airports';
-const description = 'Browse all airports worldwide. Search and filter through our comprehensive database of global aviation infrastructure.';
-const canonicalUrl = 'https://airport.ayamap.com/airports/';
+const title =
+    "Search Airports Worldwide - Live Flights & Direct Destinations - AyaMap";
+const description =
+    "Search and explore airports worldwide. View real-time flight departures and arrivals, check live flight status, and discover direct flight destinations from any airport. Comprehensive database of global aviation infrastructure.";
+const canonicalUrl = "https://airport.ayamap.com/airports/";
 
 // Get URL parameters
 const url = new URL(Astro.request.url);
-const currentPage = parseInt(url.searchParams.get('page') || '1');
-const searchQuery = url.searchParams.get('q') || '';
-const countryFilter = url.searchParams.get('country') || '';
-const typeFilter = url.searchParams.get('type') || '';
+const currentPage = parseInt(url.searchParams.get("page") || "1");
+const searchQuery = url.searchParams.get("q") || "";
+const countryFilter = url.searchParams.get("country") || "";
+const typeFilter = url.searchParams.get("type") || "";
 const itemsPerPage = 18;
 
 // Get database from Astro locals
-const dbInstance = (Astro.locals as any).runtime?.env?.DB || (Astro.locals as any).DB;
+const dbInstance =
+    (Astro.locals as any).runtime?.env?.DB || (Astro.locals as any).DB;
 
 if (!dbInstance) {
-	throw new Error('Database not available');
+    throw new Error("Database not available");
 }
 
 // Initialize database
@@ -26,11 +29,11 @@ const db = new AirportDatabase(dbInstance);
 
 // Search airports with filters
 const searchResult = await db.searchAirports({
-	query: searchQuery,
-	country: countryFilter,
-	type: typeFilter,
-	page: currentPage,
-	limit: itemsPerPage
+    query: searchQuery,
+    country: countryFilter,
+    type: typeFilter,
+    page: currentPage,
+    limit: itemsPerPage,
 });
 
 const airports = searchResult.airports;
@@ -39,19 +42,28 @@ const totalPages = Math.ceil(totalItems / itemsPerPage);
 
 // Get countries for filter dropdown
 const countryStats = await db.getCountryStats();
-const countries = countryStats.map(stat => ({
-	iso_country: stat.country,
-	country_name: stat.country_name
+const countries = countryStats.map((stat) => ({
+    iso_country: stat.country,
+    country_name: stat.country_name,
 }));
 
 // Get global stats
 const allStats = await db.getCountryStats();
 const stats = {
-	total: allStats.reduce((sum, stat) => sum + stat.airport_count, 0),
-	large: allStats.reduce((sum, stat) => sum + (stat.large_airport_count || 0), 0),
-	medium: allStats.reduce((sum, stat) => sum + (stat.medium_airport_count || 0), 0),
-	small: allStats.reduce((sum, stat) => sum + (stat.small_airport_count || 0), 0),
-	countries: allStats.length
+    total: allStats.reduce((sum, stat) => sum + stat.airport_count, 0),
+    large: allStats.reduce(
+        (sum, stat) => sum + (stat.large_airport_count || 0),
+        0,
+    ),
+    medium: allStats.reduce(
+        (sum, stat) => sum + (stat.medium_airport_count || 0),
+        0,
+    ),
+    small: allStats.reduce(
+        (sum, stat) => sum + (stat.small_airport_count || 0),
+        0,
+    ),
+    countries: allStats.length,
 };
 
 // Build pagination info
@@ -60,224 +72,359 @@ const showingTo = Math.min(currentPage * itemsPerPage, totalItems);
 
 // Helper function to build URL with parameters
 function buildUrl(params: Record<string, string | number>) {
-	const urlParams = new URLSearchParams();
-	
-	if (params.q) urlParams.set('q', params.q.toString());
-	if (params.country) urlParams.set('country', params.country.toString());
-	if (params.type) urlParams.set('type', params.type.toString());
-	if (params.page && params.page !== 1) urlParams.set('page', params.page.toString());
-	
-	const queryString = urlParams.toString();
-	return `/airports${queryString ? '?' + queryString : ''}`;
+    const urlParams = new URLSearchParams();
+
+    if (params.q) urlParams.set("q", params.q.toString());
+    if (params.country) urlParams.set("country", params.country.toString());
+    if (params.type) urlParams.set("type", params.type.toString());
+    if (params.page && params.page !== 1)
+        urlParams.set("page", params.page.toString());
+
+    const queryString = urlParams.toString();
+    return `/airports${queryString ? "?" + queryString : ""}`;
 }
 ---
 
-<Layout title={title}>
-	<!-- SEO Meta Tags -->
-	<meta name="description" content={description} slot="head" />
-	<meta name="keywords" content="airports, aviation, global airports, airport database, flight infrastructure" slot="head" />
-	<link rel="canonical" href={canonicalUrl} slot="head" />
-	
-	<!-- Open Graph Meta Tags -->
-	<meta property="og:title" content={title} slot="head" />
-	<meta property="og:description" content={description} slot="head" />
-	<meta property="og:url" content="https://airport.ayamap.com/airports/" slot="head" />
-	<meta property="og:type" content="website" slot="head" />
+<Layout title={title} description={description}>
+    <!-- SEO Meta Tags -->
+    <meta
+        name="keywords"
+        content="airports, live flights, flight departures, flight arrivals, real-time flight status, direct flights, airport search, aviation, global airports, airport database"
+        slot="head"
+    />
+    <link rel="canonical" href={canonicalUrl} slot="head" />
 
-	<main class="min-h-screen bg-gray-50">
-		<!-- Header Section -->
-		<section class="bg-white shadow-sm">
-			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-				<div class="text-center">
-					<nav class="flex items-center space-x-2 text-sm text-gray-500 mb-4">
-						<a href="/" class="hover:text-blue-600">Home</a>
-						<span>/</span>
-						<span class="font-medium text-gray-900">Airports</span>
-					</nav>
-					<h1 class="text-4xl font-bold text-gray-900 mb-2">
-						All Airports
-					</h1>
-					<p class="text-xl text-gray-600">
-						Explore our comprehensive database of airports worldwide
-					</p>
-				</div>
-				
-				<!-- Stats Section -->
-				<div class="mb-8">
-					<h2 class="text-2xl font-bold text-gray-900 mb-4 text-center">Global Airport Statistics</h2>
-				</div>
-				<div class="grid grid-cols-2 md:grid-cols-5 gap-4 mt-8">
-					<div class="bg-blue-50 p-4 rounded-lg text-center">
-						<div class="text-2xl font-bold text-blue-600">{stats.total.toLocaleString()}</div>
-						<div class="text-sm text-gray-600">Total Airports</div>
-					</div>
-					<div class="bg-green-50 p-4 rounded-lg text-center">
-						<div class="text-2xl font-bold text-green-600">{stats.large.toLocaleString()}</div>
-						<div class="text-sm text-gray-600">Large Airports</div>
-					</div>
-					<div class="bg-yellow-50 p-4 rounded-lg text-center">
-						<div class="text-2xl font-bold text-yellow-600">{stats.medium.toLocaleString()}</div>
-						<div class="text-sm text-gray-600">Medium Airports</div>
-					</div>
-					<div class="bg-purple-50 p-4 rounded-lg text-center">
-						<div class="text-2xl font-bold text-purple-600">{stats.small.toLocaleString()}</div>
-						<div class="text-sm text-gray-600">Small Airports</div>
-					</div>
-					<div class="bg-gray-50 p-4 rounded-lg text-center">
-						<div class="text-2xl font-bold text-gray-600">{stats.countries.toLocaleString()}</div>
-						<div class="text-sm text-gray-600">Countries</div>
-					</div>
-				</div>
-			</div>
-		</section>
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content={title} slot="head" />
+    <meta property="og:description" content={description} slot="head" />
+    <meta
+        property="og:url"
+        content="https://airport.ayamap.com/airports/"
+        slot="head"
+    />
+    <meta property="og:type" content="website" slot="head" />
 
-		<!-- Search and Filter Section -->
-		<section class="bg-white border-b border-gray-200">
-			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-				<form method="GET" class="flex flex-col lg:flex-row gap-4 items-center justify-between">
-					<div class="flex flex-col sm:flex-row gap-4 flex-1">
-						<div class="flex-1 max-w-md">
-							<input 
-								type="text" 
-								name="q"
-								value={searchQuery}
-								placeholder="Search airports by name, code, or city..."
-								class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-							/>
-						</div>
-						<select name="country" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-							<option value="">All Countries</option>
-							{countries.map(country => (
-								<option value={country.iso_country} selected={countryFilter === country.iso_country}>
-									{country.country_name}
-								</option>
-							))}
-						</select>
-						<select name="type" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-							<option value="">All Types</option>
-							<option value="large_airport" selected={typeFilter === 'large_airport'}>Large Airport</option>
-							<option value="medium_airport" selected={typeFilter === 'medium_airport'}>Medium Airport</option>
-							<option value="small_airport" selected={typeFilter === 'small_airport'}>Small Airport</option>
-							<option value="heliport" selected={typeFilter === 'heliport'}>Heliport</option>
-							<option value="seaplane_base" selected={typeFilter === 'seaplane_base'}>Seaplane Base</option>
-						</select>
-						<button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-							Search
-						</button>
-					</div>
-				</form>
-			</div>
-		</section>
+    <main class="min-h-screen bg-gray-50">
+        <!-- Header Section -->
+        <section class="bg-white shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="text-center">
+                    <nav
+                        class="flex items-center space-x-2 text-sm text-gray-500 mb-4"
+                    >
+                        <a href="/" class="hover:text-blue-600">Home</a>
+                        <span>/</span>
+                        <span class="font-medium text-gray-900">Airports</span>
+                    </nav>
+                    <h1 class="text-4xl font-bold text-gray-900 mb-2">
+                        All Airports
+                    </h1>
+                    <p class="text-xl text-gray-600">
+                        Explore our comprehensive database of airports worldwide
+                    </p>
+                </div>
 
-		<!-- Airports Section -->
-		<section class="py-8">
-			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-				<div class="mb-6">
-					<h2 class="text-2xl font-bold text-gray-900 mb-4">Search Results</h2>
-				</div>
-				<!-- Results Info -->
-				<div class="mb-6">
-					<p class="text-gray-600">
-						Showing {showingFrom} to {showingTo} of {totalItems.toLocaleString()} airports
-						{searchQuery && ` for "${searchQuery}"`}
-						{countryFilter && ` in ${countries.find(c => c.iso_country === countryFilter)?.country_name || countryFilter}`}
-						{typeFilter && ` (${typeFilter.replace('_', ' ')})`}
-					</p>
-				</div>
+                <!-- Stats Section -->
+                <div class="mb-8">
+                    <h2
+                        class="text-2xl font-bold text-gray-900 mb-4 text-center"
+                    >
+                        Global Airport Statistics
+                    </h2>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mt-8">
+                    <div class="bg-blue-50 p-4 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-blue-600">
+                            {stats.total.toLocaleString()}
+                        </div>
+                        <div class="text-sm text-gray-600">Total Airports</div>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-green-600">
+                            {stats.large.toLocaleString()}
+                        </div>
+                        <div class="text-sm text-gray-600">Large Airports</div>
+                    </div>
+                    <div class="bg-yellow-50 p-4 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-yellow-600">
+                            {stats.medium.toLocaleString()}
+                        </div>
+                        <div class="text-sm text-gray-600">Medium Airports</div>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-purple-600">
+                            {stats.small.toLocaleString()}
+                        </div>
+                        <div class="text-sm text-gray-600">Small Airports</div>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-gray-600">
+                            {stats.countries.toLocaleString()}
+                        </div>
+                        <div class="text-sm text-gray-600">Countries</div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-				<!-- Airports Grid -->
-				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-					{airports.map(airport => (
-						<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow flex flex-col h-full">
-							<div class="flex justify-between items-start mb-4">
-								<div>
-									<h3 class="text-lg font-semibold text-gray-900 mb-1">{airport.name}</h3>
-									<p class="text-sm text-gray-600">{airport.ident}</p>
-								</div>
-								<span class={`px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap min-w-[100px] text-center ${
-									airport.type === 'large_airport' ? 'bg-green-100 text-green-800' :
-									airport.type === 'medium_airport' ? 'bg-yellow-100 text-yellow-800' :
-									airport.type === 'small_airport' ? 'bg-blue-100 text-blue-800' :
-									'bg-gray-100 text-gray-800'
-								}`}>
-									{(airport.type || 'unknown').replace('_', ' ')}
-								</span>
-							</div>
-							<div class="space-y-2 mb-4 flex-grow">
-								<p class="text-sm text-gray-600">
-									<span class="font-medium">Location:</span> {airport.municipality || airport.address?.municipality || 'Unknown'}, {airport.address?.country_name || airport.iso_country || 'Unknown'}
-								</p>
-								<p class="text-sm text-gray-600">
-									<span class="font-medium">Coordinates:</span> {airport.latitude_deg?.toFixed(4) || 'N/A'}, {airport.longitude_deg?.toFixed(4) || 'N/A'}
-								</p>
-								{airport.elevation_ft && (
-									<p class="text-sm text-gray-600">
-										<span class="font-medium">Elevation:</span> {airport.elevation_ft} ft
-									</p>
-								)}
-							</div>
-							<div class="flex gap-2 mt-auto">
-								<a href={`/airports/${airport.ident}`} class="flex-1 bg-blue-600 text-white text-center py-2 px-3 rounded-lg hover:bg-blue-700 transition-colors text-sm">
-									View Details
-								</a>
-								<a href={`/?lat=${airport.latitude_deg}&lng=${airport.longitude_deg}&zoom=12`} class="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm">
-									🗺️
-								</a>
-							</div>
-						</div>
-					))}
-				</div>
+        <!-- Search and Filter Section -->
+        <section class="bg-white border-b border-gray-200">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <form
+                    method="GET"
+                    class="flex flex-col lg:flex-row gap-4 items-center justify-between"
+                >
+                    <div class="flex flex-col sm:flex-row gap-4 flex-1">
+                        <div class="flex-1 max-w-md">
+                            <input
+                                type="text"
+                                name="q"
+                                value={searchQuery}
+                                placeholder="Search airports by name, code, or city..."
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                        </div>
+                        <select
+                            name="country"
+                            class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">All Countries</option>
+                            {
+                                countries.map((country) => (
+                                    <option
+                                        value={country.iso_country}
+                                        selected={
+                                            countryFilter ===
+                                            country.iso_country
+                                        }
+                                    >
+                                        {country.country_name}
+                                    </option>
+                                ))
+                            }
+                        </select>
+                        <select
+                            name="type"
+                            class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">All Types</option>
+                            <option
+                                value="large_airport"
+                                selected={typeFilter === "large_airport"}
+                                >Large Airport</option
+                            >
+                            <option
+                                value="medium_airport"
+                                selected={typeFilter === "medium_airport"}
+                                >Medium Airport</option
+                            >
+                            <option
+                                value="small_airport"
+                                selected={typeFilter === "small_airport"}
+                                >Small Airport</option
+                            >
+                            <option
+                                value="heliport"
+                                selected={typeFilter === "heliport"}
+                                >Heliport</option
+                            >
+                            <option
+                                value="seaplane_base"
+                                selected={typeFilter === "seaplane_base"}
+                                >Seaplane Base</option
+                            >
+                        </select>
+                        <button
+                            type="submit"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            Search
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
 
-				<!-- Pagination -->
-				{totalPages > 1 && (
-					<div class="flex items-center justify-between">
-						<div class="text-sm text-gray-700">
-							Page {currentPage} of {totalPages}
-						</div>
-						<div class="flex gap-2">
-							{currentPage > 1 && (
-								<a href={buildUrl({ q: searchQuery, country: countryFilter, type: typeFilter, page: currentPage - 1 })} 
-								   class="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
-									Previous
-								</a>
-							)}
-							<span class="px-3 py-2 text-sm text-gray-700">Page {currentPage}</span>
-							{currentPage < totalPages && (
-								<a href={buildUrl({ q: searchQuery, country: countryFilter, type: typeFilter, page: currentPage + 1 })} 
-								   class="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
-									Next
-								</a>
-							)}
-						</div>
-					</div>
-				)}
-			</div>
-		</section>
+        <!-- Airports Section -->
+        <section class="py-8">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">
+                        Search Results
+                    </h2>
+                </div>
+                <!-- Results Info -->
+                <div class="mb-6">
+                    <p class="text-gray-600">
+                        Showing {showingFrom} to {showingTo} of {
+                            totalItems.toLocaleString()
+                        } airports
+                        {searchQuery && ` for "${searchQuery}"`}
+                        {
+                            countryFilter &&
+                                ` in ${countries.find((c) => c.iso_country === countryFilter)?.country_name || countryFilter}`
+                        }
+                        {typeFilter && ` (${typeFilter.replace("_", " ")})`}
+                    </p>
+                </div>
 
-	</main>
+                <!-- Airports Grid -->
+                <div
+                    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
+                >
+                    {
+                        airports.map((airport) => (
+                            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow flex flex-col h-full">
+                                <div class="flex justify-between items-start mb-4">
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-gray-900 mb-1">
+                                            {airport.name}
+                                        </h3>
+                                        <p class="text-sm text-gray-600">
+                                            {airport.ident}
+                                        </p>
+                                    </div>
+                                    <span
+                                        class={`px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap min-w-[100px] text-center ${
+                                            airport.type === "large_airport"
+                                                ? "bg-green-100 text-green-800"
+                                                : airport.type ===
+                                                    "medium_airport"
+                                                  ? "bg-yellow-100 text-yellow-800"
+                                                  : airport.type ===
+                                                      "small_airport"
+                                                    ? "bg-blue-100 text-blue-800"
+                                                    : "bg-gray-100 text-gray-800"
+                                        }`}
+                                    >
+                                        {(airport.type || "unknown").replace(
+                                            "_",
+                                            " ",
+                                        )}
+                                    </span>
+                                </div>
+                                <div class="space-y-2 mb-4 flex-grow">
+                                    <p class="text-sm text-gray-600">
+                                        <span class="font-medium">
+                                            Location:
+                                        </span>{" "}
+                                        {airport.municipality ||
+                                            airport.address?.municipality ||
+                                            "Unknown"}
+                                        ,{" "}
+                                        {airport.address?.country_name ||
+                                            airport.iso_country ||
+                                            "Unknown"}
+                                    </p>
+                                    <p class="text-sm text-gray-600">
+                                        <span class="font-medium">
+                                            Coordinates:
+                                        </span>{" "}
+                                        {airport.latitude_deg?.toFixed(4) ||
+                                            "N/A"}
+                                        ,{" "}
+                                        {airport.longitude_deg?.toFixed(4) ||
+                                            "N/A"}
+                                    </p>
+                                    {airport.elevation_ft && (
+                                        <p class="text-sm text-gray-600">
+                                            <span class="font-medium">
+                                                Elevation:
+                                            </span>{" "}
+                                            {airport.elevation_ft} ft
+                                        </p>
+                                    )}
+                                </div>
+                                <div class="flex gap-2 mt-auto">
+                                    <a
+                                        href={`/airports/${airport.ident}`}
+                                        class="flex-1 bg-blue-600 text-white text-center py-2 px-3 rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                                    >
+                                        View Details
+                                    </a>
+                                    <a
+                                        href={`/?lat=${airport.latitude_deg}&lng=${airport.longitude_deg}&zoom=12`}
+                                        class="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+                                    >
+                                        🗺️
+                                    </a>
+                                </div>
+                            </div>
+                        ))
+                    }
+                </div>
+
+                <!-- Pagination -->
+                {
+                    totalPages > 1 && (
+                        <div class="flex items-center justify-between">
+                            <div class="text-sm text-gray-700">
+                                Page {currentPage} of {totalPages}
+                            </div>
+                            <div class="flex gap-2">
+                                {currentPage > 1 && (
+                                    <a
+                                        href={buildUrl({
+                                            q: searchQuery,
+                                            country: countryFilter,
+                                            type: typeFilter,
+                                            page: currentPage - 1,
+                                        })}
+                                        class="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                                    >
+                                        Previous
+                                    </a>
+                                )}
+                                <span class="px-3 py-2 text-sm text-gray-700">
+                                    Page {currentPage}
+                                </span>
+                                {currentPage < totalPages && (
+                                    <a
+                                        href={buildUrl({
+                                            q: searchQuery,
+                                            country: countryFilter,
+                                            type: typeFilter,
+                                            page: currentPage + 1,
+                                        })}
+                                        class="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                                    >
+                                        Next
+                                    </a>
+                                )}
+                            </div>
+                        </div>
+                    )
+                }
+            </div>
+        </section>
+    </main>
 </Layout>
 
 <script>
-	// Simple client-side functionality for map button
-	document.getElementById('view-on-map')?.addEventListener('click', () => {
-		window.location.href = '/';
-	});
+    // Simple client-side functionality for map button
+    document.getElementById("view-on-map")?.addEventListener("click", () => {
+        window.location.href = "/";
+    });
 </script>
 
 <style>
-	/* Additional styles for better UX */
-	.search-input:focus {
-		outline: none;
-		border-color: #3b82f6;
-		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-	}
-	
-	.loading-spinner {
-		animation: spin 1s linear infinite;
-	}
-	
-	@keyframes spin {
-		from { transform: rotate(0deg); }
-		to { transform: rotate(360deg); }
-	}
+    /* Additional styles for better UX */
+    .search-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .loading-spinner {
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(360deg);
+        }
+    }
 </style>
