@@ -4,7 +4,7 @@ import { AirportDatabase } from "../lib/database";
 export const getStaticPaths: GetStaticPaths = async () => {
   // This will be called at build time to generate static pages
   // We need to calculate how many pages we'll need based on actual data
-  const AIRPORTS_PER_PAGE = 8000;
+  const AIRPORTS_PER_PAGE = 3000;
 
   // Query the database to get the actual total count of airports
   // Note: In static generation, we use the exact count from the database
@@ -31,7 +31,7 @@ export const GET: APIRoute = async ({ locals, params }) => {
 
     const airportDb = new AirportDatabase(db);
     const page = parseInt(params.page as string) || 1;
-    const AIRPORTS_PER_PAGE = 8000;
+    const AIRPORTS_PER_PAGE = 2500;
     const offset = (page - 1) * AIRPORTS_PER_PAGE;
 
     // Get airports for this page
@@ -78,6 +78,30 @@ export const GET: APIRoute = async ({ locals, params }) => {
 		<priority>0.6</priority>
 	</url>
 `;
+        // Add ICAO code URL if different from ident
+        if (airport.icao_code && airport.icao_code !== airport.ident) {
+          sitemap += `	<url>
+		<loc>${baseUrl}/airports/${airport.icao_code}</loc>
+		<lastmod>${currentDate}</lastmod>
+		<changefreq>monthly</changefreq>
+		<priority>0.6</priority>
+	</url>
+`;
+        }
+        // Add IATA code URL if exists and different from ident and icao
+        if (
+          airport.iata_code &&
+          airport.iata_code !== airport.ident &&
+          airport.iata_code !== airport.icao_code
+        ) {
+          sitemap += `	<url>
+		<loc>${baseUrl}/airports/${airport.iata_code}</loc>
+		<lastmod>${currentDate}</lastmod>
+		<changefreq>monthly</changefreq>
+		<priority>0.6</priority>
+	</url>
+`;
+        }
       }
     }
 
