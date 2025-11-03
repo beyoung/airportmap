@@ -2,10 +2,35 @@
 /**
  * Interactive Map Component
  * Displays airports on a world map using MapLibre GL JS
+ *
+ * Props (optional):
+ * - latitude, longitude: if provided, centers map to airport and switches to "detail" mode
+ * - name, ident, municipality, iso_country: used for marker popup in detail mode
+ * When props are not provided, behaves as homepage world map.
  */
+
+export interface Props {
+  latitude?: number;
+  longitude?: number;
+  name?: string;
+  ident?: string;
+  municipality?: string;
+  iso_country?: string;
+}
+
+const { latitude, longitude, name, ident, municipality, iso_country } = Astro.props as Props;
 ---
 
-<div id="map" class="w-full h-[600px] relative"></div>
+<div
+  id="map"
+  class="w-full h-[600px] relative"
+  data-latitude={latitude ?? ''}
+  data-longitude={longitude ?? ''}
+  data-name={name ?? ''}
+  data-ident={ident ?? ''}
+  data-municipality={municipality ?? ''}
+  data-iso-country={iso_country ?? ''}
+></div>
 <div
     id="map-loading"
     class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[1000] text-center bg-white/90 p-8 rounded-lg shadow-lg"
@@ -19,8 +44,20 @@
 
 <script>
     import maplibregl from "maplibre-gl";
+    import type * as GeoJSON from "geojson";
+   
+    // Read optional props from dataset to decide mode
+    const mapEl = document.getElementById("map") as HTMLElement | null;
+     console.log(mapEl?.dataset);
+    const latStr = mapEl?.dataset.latitude ?? '';
+    const lonStr = mapEl?.dataset.longitude ?? '';
+    const hasCoords = latStr !== '' && lonStr !== '' && !isNaN(parseFloat(latStr)) && !isNaN(parseFloat(lonStr));
+    const detailCenter: [number, number] = hasCoords
+        ? [parseFloat(lonStr), parseFloat(latStr)]
+        : [0, 20];
+    const initialZoom = hasCoords ? 12 : 3;
 
-    // Initialize map
+    // Initialize map (detail vs homepage)
     const map = new maplibregl.Map({
         container: "map",
         style: {
@@ -42,18 +79,19 @@
                     type: "raster",
                     source: "raster-tiles",
                     minzoom: 0,
-                    maxzoom: 18,
+                    maxzoom: 16,
                 },
             ],
         },
-        center: [0, 20], // Center on world
-        zoom: 2,
-        maxZoom: 18,
+        center: detailCenter,
+        zoom: initialZoom,
+        maxZoom: 16,
         minZoom: 1,
     });
     map.addControl(new maplibregl.GlobeControl());
     map.addControl(new maplibregl.FullscreenControl());
     map.addControl(new maplibregl.NavigationControl());
+
     map.on("style.load", () => {
         // map.setProjection({
         //   type: "globe",
@@ -66,6 +104,57 @@
     // Hide loading indicator when map loads
     map.on("load", () => {
         document.getElementById("map-loading")?.classList.add("hidden");
+        // Refs for detail-mode popup/marker so we can close later on empty clicks
+        let selectedPopupRef: maplibregl.Popup | null = null;
+        let selectedMarkerRef: maplibregl.Marker | null = null;
+
+        // If in detail mode, add a primary marker and popup
+        // (content rendered via createAirportPopupContent for consistency)
+        if (hasCoords && mapEl) {
+            const p = {
+                name: mapEl.dataset.name || mapEl.dataset.ident || "Selected Airport",
+                ident: mapEl.dataset.ident || "",
+                iso_country: mapEl.dataset.isoCountry || "",
+                municipality: mapEl.dataset.municipality || "",
+                // municipality is not used by createAirportPopupContent, so omit safely
+            } as Record<string, any>;
+
+            const localTypeColors = {
+                large_airport: "#ef4444",
+                medium_airport: "#f59e0b",
+                small_airport: "#10b981",
+                heliport: "#3b82f6",
+                seaplane_base: "#8b5cf6",
+                balloonport: "#6366f1",
+                default: "#9ca3af",
+            } as Record<string, string>;
+
+            const selectedPopup = new maplibregl.Popup({
+                offset: 12,
+                closeButton: true,
+                closeOnClick: false,
+                className:
+                    "max-w-80 [&_.maplibregl-popup-content]:p-0 [&_.maplibregl-popup-content]:rounded-xl [&_.maplibregl-popup-content]:shadow-xl [&_.maplibregl-popup-content]:backdrop-blur-sm [&_.maplibregl-popup-content]:border [&_.maplibregl-popup-content]:border-white/20 [&_.maplibregl-popup-content]:overflow-hidden [&_.maplibregl-popup-content]:w-72 [&_.maplibregl-popup-content]:max-w-72 [&_.maplibregl-popup-content]:min-w-72 [&_.maplibregl-popup-tip]:border-t-white/95 [&_.maplibregl-popup-tip]:border-b-white/95",
+            })
+                .setHTML(createAirportPopupContent(p, localTypeColors, false))
+                .setLngLat(detailCenter)
+                .addTo(map);
+
+            // Keep a reference to close later when clicking or clearing selection
+            selectedPopupRef = selectedPopup;
+
+            // Apply selected ring highlight consistent with click logic
+            const selectedSource = map.getSource("selected-airport") as maplibregl.GeoJSONSource | undefined;
+            if (selectedSource) {
+                const initialGeom: GeoJSON.Point = { type: "Point", coordinates: detailCenter };
+                selectedSource.setData({
+                    type: "FeatureCollection",
+                    features: [
+                        { type: "Feature", geometry: initialGeom, properties: { type: p?.type ?? "default" } },
+                    ],
+                });
+            }
+        }
 
         map.addSource("airports", {
             type: "vector",
@@ -269,7 +358,7 @@
                 ],
             },
             minzoom: 0,
-            maxzoom: 14,
+            maxzoom: 16,
         });
 
         // Add airport labels layer
@@ -349,7 +438,7 @@
                 ],
             },
             minzoom: 6, // Start showing text from zoom level 3 to avoid crowding at low zoom
-            maxzoom: 14, // Allow display at higher zoom levels
+            maxzoom: 16, // Allow display at higher zoom levels
         });
 
         // Hover popup for airports
@@ -361,12 +450,12 @@
             | "seaplane_base"
             | "balloonport";
 
-        const formatType = (t: string | undefined): string => {
+        function formatType(t: string | undefined): string {
             if (!t) return "Unknown";
             return String(t)
                 .replace(/_/g, " ")
                 .replace(/\b\w/g, (c) => c.toUpperCase());
-        };
+        }
 
         const typeColors: Record<AirportType | "default", string> = {
             large_airport: "#ef4444", // red
@@ -378,6 +467,68 @@
             default: "#9ca3af", // gray
         };
 
+        // In detail mode: enrich the initial popup using full airport data
+        // so content matches the click popup (IATA/ICAO, region, elevation, type)
+        if (hasCoords && mapEl && mapEl.dataset.ident) {
+            const identCode = mapEl.dataset.ident;
+            // Wait until style/layers are idle, then try to read vector tile properties first
+            map.once("idle", async () => {
+                let enrichedProps: Record<string, any> | null = null;
+                try {
+                    const features = map.querySourceFeatures("airports", {
+                        sourceLayer: "airports",
+                        filter: ["==", ["get", "ident"], identCode],
+                    });
+                    if (features && features.length > 0) {
+                        enrichedProps = (features[0].properties || {}) as Record<string, any>;
+                    }
+                } catch (_) {
+                    // ignore and fall back to API
+                }
+
+                // Fallback: fetch from API by code if vector tile didn't return the feature
+                if (!enrichedProps) {
+                    try {
+                        const res = await fetch(`/api/airports/${encodeURIComponent(identCode)}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            const a = (data && data.airport) || {};
+                            enrichedProps = {
+                                ident: a.ident,
+                                name: a.name,
+                                type: a.type,
+                                iata_code: a.iata_code,
+                                icao_code: a.icao_code,
+                                iso_region: a.iso_region,
+                                iso_country: a.iso_country,
+                                elevation_ft: a.elevation_ft,
+                            } as Record<string, any>;
+                        }
+                    } catch (_) {
+                        // ignore network errors
+                    }
+                }
+
+                // Update the initial selected popup and selected ring if we obtained details
+                if (enrichedProps && selectedPopupRef) {
+                    selectedPopupRef.setHTML(createAirportPopupContent(enrichedProps, typeColors, false));
+                    const selectedSource = map.getSource("selected-airport") as maplibregl.GeoJSONSource | undefined;
+                    if (selectedSource) {
+                        selectedSource.setData({
+                            type: "FeatureCollection",
+                            features: [
+                                {
+                                    type: "Feature",
+                                    geometry: { type: "Point", coordinates: detailCenter },
+                                    properties: { type: enrichedProps.type },
+                                },
+                            ],
+                        });
+                    }
+                }
+            });
+        }
+
         const hoverPopup = new maplibregl.Popup({
             closeButton: false,
             closeOnClick: false,
@@ -386,12 +537,14 @@
                 "max-w-80 [&_.maplibregl-popup-content]:p-0 [&_.maplibregl-popup-content]:rounded-xl [&_.maplibregl-popup-content]:shadow-xl [&_.maplibregl-popup-content]:backdrop-blur-sm [&_.maplibregl-popup-content]:border [&_.maplibregl-popup-content]:border-white/20 [&_.maplibregl-popup-content]:overflow-hidden [&_.maplibregl-popup-content]:w-72 [&_.maplibregl-popup-content]:max-w-72 [&_.maplibregl-popup-content]:min-w-72 [&_.maplibregl-popup-tip]:border-t-white/95 [&_.maplibregl-popup-tip]:border-b-white/95",
         });
 
-        let hoveredAirportId: string | null = null;
+        let hoveredAirportId: string | number | null = null;
+        let clickedAirportId: string | number | null = null;
 
         // Unified popup content generator with compact Tailwind styling
         function createAirportPopupContent(
             properties: any,
             typeColors: Record<string, string>,
+            showActions: boolean = true,
         ) {
             const p = properties || {};
             const name = p?.name || p?.ident || "Unknown Airport";
@@ -500,6 +653,9 @@
             }
           </div>
 
+          ${
+            showActions
+                ? `
           <!-- Compact Action buttons -->
           <div class="px-4 pb-4 flex gap-2">
             <a href="/airports/${p?.ident}" target="_blank"
@@ -521,6 +677,9 @@
                     : ""
             }
           </div>
+          `
+                : ""
+          }
         </div>
       `;
         }
@@ -532,32 +691,41 @@
         map.on("mousemove", "airports-points", (e) => {
             if (e.features && e.features.length > 0) {
                 const feature = e.features[0];
-                const p = feature.properties;
+                const p = feature.properties as any;
+                // Stable feature id used for hover/click comparison; falls back to ident
+                const fid: string | number | null =
+                    (feature.id as string | number | undefined) ??
+                    (p?.ident as string | number | undefined) ??
+                    null;
 
-                // Only close click popup if we're hovering over a different airport
-                if (clickPopup.isOpen() && hoveredAirportId !== feature.id) {
-                    clickPopup.remove();
-                    // Also clear the selected airport highlight
-                    (map.getSource("selected-airport") as any).setData({
-                        type: "FeatureCollection",
-                        features: [],
-                    });
-                }
-
-                // Only show hover popup if there's no click popup open, or if we're hovering over a different airport
-                if (!clickPopup.isOpen() || hoveredAirportId !== feature.id) {
-                    if (hoveredAirportId !== feature.id) {
-                        hoveredAirportId = feature.id as string;
-
-                        hoverPopup
-                            .setLngLat(e.lngLat)
-                            .setHTML(createAirportPopupContent(p, typeColors))
-                            .addTo(map);
+                // If a click popup exists, only remove it when hovering a different airport
+                if (clickedAirportId != null && fid != null) {
+                    if (clickedAirportId !== fid && clickPopup.isOpen()) {
+                        clickPopup.remove();
+                        clickedAirportId = null;
+                        const selectedSource = map.getSource("selected-airport") as maplibregl.GeoJSONSource | undefined;
+                        if (selectedSource) {
+                            selectedSource.setData({ type: "FeatureCollection", features: [] });
+                        }
                     } else {
-                        // Update popup position even for the same airport
-                        hoverPopup.setLngLat(e.lngLat);
+                        // Hovering the same airport as the clicked one: keep click popup, skip hover
+                        hoveredAirportId = fid;
+                        return;
                     }
                 }
+
+                // If initial detail popup exists, remove it when hovering any airport
+                if (selectedPopupRef) {
+                    selectedPopupRef.remove();
+                    selectedPopupRef = null;
+                }
+
+                // Show hover popup for the feature under cursor
+                hoveredAirportId = fid;
+                hoverPopup
+                    .setLngLat(e.lngLat)
+                    .setHTML(createAirportPopupContent(p, typeColors, !hasCoords))
+                    .addTo(map);
             }
         });
 
@@ -621,27 +789,55 @@
         map.on("click", "airports-points", (e) => {
             if (!e.features || e.features.length === 0) return;
             const f = e.features[0];
-            const geometry = f.geometry as any;
-            const coordinates = geometry.coordinates.slice();
-            const p: any = f.properties || {};
+            const geometry = f.geometry as GeoJSON.Point;
+            const coordinates = geometry.coordinates.slice() as [number, number];
+            const p = (f.properties || {}) as Record<string, any>;
+            const pid: string | number | null =
+                (f.id as string | number | undefined) ??
+                ((f.properties as any)?.ident as string | number | undefined) ??
+                null;
 
             // Remove hover popup when clicking to avoid duplicate popups
             hoverPopup.remove();
+            // Also close initial detail popup/marker if present to avoid double popups
+            if (selectedPopupRef) { selectedPopupRef.remove(); selectedPopupRef = null; }
+            if (selectedMarkerRef) { selectedMarkerRef.remove(); selectedMarkerRef = null; }
 
-            (map.getSource("selected-airport") as any).setData({
-                type: "FeatureCollection",
-                features: [
-                    {
-                        type: "Feature",
-                        geometry,
-                        properties: { type: p?.type },
-                    },
-                ],
-            });
+            const selectedSource = map.getSource("selected-airport") as maplibregl.GeoJSONSource | undefined;
+            if (selectedSource) {
+                selectedSource.setData({
+                    type: "FeatureCollection",
+                    features: [
+                        {
+                            type: "Feature",
+                            geometry,
+                            properties: { type: p?.type },
+                        },
+                    ],
+                });
+            }
             clickPopup
                 .setLngLat(coordinates)
-                .setHTML(createAirportPopupContent(p, typeColors))
+                .setHTML(createAirportPopupContent(p, typeColors, !hasCoords))
                 .addTo(map);
+
+            // Track clicked airport id for subsequent hover logic
+            clickedAirportId = pid;
+        });
+
+        // Close any popups when clicking on empty map (no airport picked)
+        map.on("click", (e) => {
+            const features = map.queryRenderedFeatures(e.point, { layers: ["airports-points"] });
+            if (!features || features.length === 0) {
+                hoverPopup.remove();
+                clickPopup.remove();
+                clickedAirportId = null;
+                if (selectedPopupRef) selectedPopupRef.remove();
+                const selectedSource = map.getSource("selected-airport") as maplibregl.GeoJSONSource | undefined;
+                if (selectedSource) {
+                    selectedSource.setData({ type: "FeatureCollection", features: [] });
+                }
+            }
         });
     });
 

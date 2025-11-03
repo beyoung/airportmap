@@ -1,6 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import MiniMap from '../../components/MiniMap.astro';
+import Map from '../../components/Map.astro';
 import { AirportDatabase } from '../../lib/database';
 
 // Get airport identifier from URL params
@@ -241,31 +241,20 @@ function getTypeBadge(type: string | null) {
 						<!-- Location Card -->
 						<div class="bg-white rounded-lg shadow-sm p-6">
 							<h2 class="text-2xl font-bold text-gray-900 mb-4">Location</h2>
-							<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-								<div>
-									<label class="block text-sm font-medium text-gray-500 mb-1">Latitude</label>
-									<p class="text-lg text-gray-900">{airportData.latitude_deg ? airportData.latitude_deg.toFixed(6) : '-'}</p>
-								</div>
-								<div>
-									<label class="block text-sm font-medium text-gray-500 mb-1">Longitude</label>
-									<p class="text-lg text-gray-900">{airportData.longitude_deg ? airportData.longitude_deg.toFixed(6) : '-'}</p>
-								</div>
-							</div>
-							<!-- Mini Map -->
-							{airportData.latitude_deg && airportData.longitude_deg ? (
-								<MiniMap
-									latitude={airportData.latitude_deg}
-									longitude={airportData.longitude_deg}
-									name={airportData.name || `${airportData.ident} Airport`}
-									ident={airportData.ident}
-									municipality={airportData.municipality || undefined}
-									iso_country={airportData.iso_country || undefined}
-								/>
-							) : (
-								<div class="h-64 rounded-lg overflow-hidden border border-gray-200 flex items-center justify-center bg-gray-100">
-									<p class="text-gray-600">Location coordinates not available</p>
-								</div>
-							)}
+                            {airportData.latitude_deg && airportData.longitude_deg ? (
+                                <Map
+                                    latitude={airportData.latitude_deg}
+                                    longitude={airportData.longitude_deg}
+                                    name={airportData.name || `${airportData.ident} Airport`}
+                                    ident={airportData.ident}
+                                    municipality={airportData.municipality || undefined}
+                                    iso_country={airportData.iso_country || undefined}
+                                />
+                            ) : (
+                                <div class="h-64 rounded-lg overflow-hidden border border-gray-200 flex items-center justify-center bg-gray-100">
+                                    <p class="text-gray-600">Location coordinates not available</p>
+                                </div>
+                            )}
 						</div>
 
 						<!-- Flight Information -->
