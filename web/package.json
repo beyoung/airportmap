@@ -7,7 +7,10 @@
     "build": "astro build",
     "astro": "astro",
     "preview": "astro build && wrangler pages dev ./dist --port 8787",
-    "deploy": "pnpm build && wrangler pages deploy dist --project-name=airports-ayamap"
+    "deploy": "pnpm build && wrangler pages deploy dist --project-name=airports-ayamap",
+    "generate:update-sql": "node ./src/scripts/update-destinations.mjs",
+    "apply:update-sql": "wrangler d1 execute airports-db --remote --file=./update-destinations.sql",
+    "apply:update-sql:parts": "bash -lc 'for f in ./update-destinations.part-*.sql; do echo \"Applying $f\"; wrangler d1 execute airports-db --remote --file=$f || exit 1; done'"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.8",
