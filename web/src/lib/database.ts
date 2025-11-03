@@ -52,6 +52,8 @@ export interface Airport {
   keywords: string | null;
   destinations: string | null;
   address_id: number | null;
+  country_name: string | null;
+  region_name: string | null;
 }
 
 export interface Address {
@@ -132,26 +134,18 @@ export class AirportDatabase {
     // Build WHERE conditions
     if (query) {
       whereConditions.push(`(
-        a.ident LIKE ? OR
         a.iata_code LIKE ? OR
         a.icao_code LIKE ? OR
         a.name LIKE ? OR
         a.municipality LIKE ? OR
-        addr.country_name LIKE ?
+        a.country_name LIKE ?
       )`);
       const searchTerm = `%${query}%`;
-      params.push(
-        searchTerm,
-        searchTerm,
-        searchTerm,
-        searchTerm,
-        searchTerm,
-        searchTerm,
-      );
+      params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
     }
 
     if (country) {
-      whereConditions.push("(a.iso_country = ? OR addr.country_name = ?)");
+      whereConditions.push("(a.iso_country = ? OR a.country_name = ?)");
       params.push(country, country);
     }
 
@@ -169,7 +163,6 @@ export class AirportDatabase {
     const countQuery = `
       SELECT COUNT(*) as total
       FROM airport a
-      LEFT JOIN address addr ON a.address_id = addr.id
       ${whereClause}
     `;
 
@@ -182,14 +175,8 @@ export class AirportDatabase {
     // Get airports with pagination
     const dataQuery = `
       SELECT
-        a.*,
-        addr.country,
-        addr.region,
-        addr.municipality as addr_municipality,
-        addr.country_name,
-        addr.region_name
+        a.*
       FROM airport a
-      LEFT JOIN address addr ON a.address_id = addr.id
       ${whereClause}
       ORDER BY
         CASE WHEN a.type = 'large_airport' THEN 1
@@ -222,17 +209,11 @@ export class AirportDatabase {
         home_link: row.home_link,
         wikipedia_link: row.wikipedia_link,
         keywords: row.keywords,
+        destinations: row.destinations,
         address_id: row.address_id,
-        address: row.country
-          ? {
-              id: row.address_id,
-              country: row.country,
-              region: row.region,
-              municipality: row.addr_municipality,
-              country_name: row.country_name,
-              region_name: row.region_name,
-            }
-          : undefined,
+        country_name: row.country_name,
+        region_name: row.region_name,
+        address: undefined,
       })) || [];
 
     return {
@@ -248,15 +229,8 @@ export class AirportDatabase {
    */
   async getAirportByCode(code: string): Promise<AirportWithAddress | null> {
     const query = `
-      SELECT
-        a.*,
-        addr.country,
-        addr.region,
-        addr.municipality as addr_municipality,
-        addr.country_name,
-        addr.region_name
+      SELECT a.*
       FROM airport a
-      LEFT JOIN address addr ON a.address_id = addr.id
       WHERE a.ident = ? OR a.iata_code = ? OR a.icao_code = ?
     `;
 
@@ -286,16 +260,9 @@ export class AirportDatabase {
       keywords: result.keywords,
       destinations: result.destinations,
       address_id: result.address_id,
-      address: result.country
-        ? {
-            id: result.address_id,
-            country: result.country,
-            region: result.region,
-            municipality: result.addr_municipality,
-            country_name: result.country_name,
-            region_name: result.region_name,
-          }
-        : undefined,
+      country_name: result.country_name,
+      region_name: result.region_name,
+      address: undefined,
       destinationsData: this.parseDestinations(result.destinations),
     };
   }
@@ -308,16 +275,9 @@ export class AirportDatabase {
     limit = 10000,
   ): Promise<AirportWithAddress[]> {
     const query = `
-      SELECT
-        a.*,
-        addr.country,
-        addr.region,
-        addr.municipality as addr_municipality,
-        addr.country_name,
-        addr.region_name
+      SELECT a.*
       FROM airport a
-      LEFT JOIN address addr ON a.address_id = addr.id
-      WHERE a.iso_country = ? OR addr.country_name = ?
+      WHERE a.iso_country = ? OR a.country_name = ?
       ORDER BY
         CASE WHEN a.type = 'large_airport' THEN 1
              WHEN a.type = 'medium_airport' THEN 2
@@ -348,17 +308,11 @@ export class AirportDatabase {
         home_link: row.home_link,
         wikipedia_link: row.wikipedia_link,
         keywords: row.keywords,
+        destinations: row.destinations,
         address_id: row.address_id,
-        address: row.country
-          ? {
-              id: row.address_id,
-              country: row.country,
-              region: row.region,
-              municipality: row.addr_municipality,
-              country_name: row.country_name,
-              region_name: row.region_name,
-            }
-          : undefined,
+        country_name: row.country_name,
+        region_name: row.region_name,
+        address: undefined,
       })) || []
     );
   }
