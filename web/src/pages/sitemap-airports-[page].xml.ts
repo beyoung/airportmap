@@ -75,7 +75,7 @@ export const GET: APIRoute = async ({ locals, params }) => {
 		<loc>${baseUrl}/airports/${airport.ident}</loc>
 		<lastmod>${currentDate}</lastmod>
 		<changefreq>monthly</changefreq>
-		<priority>0.6</priority>
+		<priority>0.4</priority>
 	</url>
 `;
         // Add ICAO code URL if different from ident
@@ -84,7 +84,7 @@ export const GET: APIRoute = async ({ locals, params }) => {
 		<loc>${baseUrl}/airports/${airport.icao_code}</loc>
 		<lastmod>${currentDate}</lastmod>
 		<changefreq>monthly</changefreq>
-		<priority>0.6</priority>
+		<priority>0.8</priority>
 	</url>
 `;
         }
@@ -99,6 +99,16 @@ export const GET: APIRoute = async ({ locals, params }) => {
 		<lastmod>${currentDate}</lastmod>
 		<changefreq>monthly</changefreq>
 		<priority>0.6</priority>
+	</url>
+`;
+        }
+        if (airport.name) {
+          const nameQuery = encodeURIComponent(airport.name);
+          sitemap += `	<url>
+		<loc>${baseUrl}/airports/${nameQuery}</loc>
+		<lastmod>${currentDate}</lastmod>
+		<changefreq>monthly</changefreq>
+		<priority>0.3</priority>
 	</url>
 `;
         }

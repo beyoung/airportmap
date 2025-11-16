@@ -19,7 +19,12 @@ if (!db) {
 
 // Create database instance and get airport data
 const airportDb = new AirportDatabase(db);
-const airportData = await airportDb.getAirportByCode(ident as string);
+const key = decodeURIComponent(ident as string);
+let airportData = await airportDb.getAirportByCode(key);
+if (!airportData) {
+  const search = await airportDb.searchAirports({ query: key, limit: 1 });
+  airportData = search.airports[0];
+}
 
 if (!airportData) {
   return Astro.redirect('/');
@@ -27,7 +32,7 @@ if (!airportData) {
 
 // Get nearby airports if coordinates are// Get nearby airports
 let nearbyAirports: Array<{ident: string, name: string | null, municipality: string | null, iso_country: string | null, type: string | null, distance: number}> = [];
-if (airportData.latitude_deg && airportData.longitude_deg) {
+/* if (airportData.latitude_deg && airportData.longitude_deg) {
   const latDelta = 100 / 111; // 100km radius
   const lngDelta = 100 / (111 * Math.cos(airportData.latitude_deg * Math.PI / 180));
 
@@ -68,7 +73,7 @@ if (airportData.latitude_deg && airportData.longitude_deg) {
     .filter(airport => airport.distance <= 100)
     .sort((a, b) => a.distance - b.distance)
     .slice(0, 3);
-}
+} */
 
 // Get Wikipedia information if available
 let wikipediaInfo = null;
@@ -112,7 +117,7 @@ const iataCode = airportData.iata_code ? `(${airportData.iata_code})` : '';
 const icaoCode = airportData.icao_code ? `ICAO: ${airportData.icao_code}` : '';
 const codes = [iataCode, icaoCode].filter(c => c).join(' | ');
 const description = `${airportData.name || ident.toUpperCase()} ${codes} in ${airportData.municipality || 'Unknown City'}, ${airportData.iso_country || 'Unknown Country'}. Check real-time flight departures and arrivals, view live flight status, and explore direct flight destinations from this airport.`;
-const canonicalUrl = `https://airport.ayamap.com/airports/${ident}`;
+const canonicalUrl = `https://airport.ayamap.com/airports/${airportData.ident}`;
 
 // Helper function for type badges
 function getTypeBadge(type: string | null) {
@@ -379,38 +384,40 @@ function getTypeBadge(type: string | null) {
 						</div>
 
 						<!-- Related Airports -->
-						{nearbyAirports.length > 0 && (
-							<div class="bg-white rounded-lg shadow-sm p-6">
-								<h3 class="text-lg font-semibold text-gray-900 mb-4">Nearby Airports</h3>
-								<div class="space-y-3">
-									{nearbyAirports.map((airport) => (
-										<div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-												<div class="flex-1 min-w-0">
-													<div class="flex items-center space-x-2">
-														<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 whitespace-nowrap flex-shrink-0">
-															{airport.ident}
-														</span>
-														<div class="min-w-0 flex-1">
-															<h4 class="text-sm font-medium text-gray-900 truncate">
-																<a href={`/airports/${airport.ident}`} class="hover:text-blue-600">
-																	{airport.name || airport.ident}
-																</a>
-															</h4>
-															<p class="text-xs text-gray-500 truncate">
-																{airport.municipality ? `${airport.municipality}, ` : ''}{airport.iso_country}
-															</p>
-														</div>
-													</div>
-												</div>
-												<div class="text-right flex-shrink-0 ml-2">
-													<span class="text-sm text-gray-500">{airport.distance.toFixed(1)} km</span>
-													<div class="mt-1 text-xs" set:html={getTypeBadge(airport.type)}></div>
-												</div>
-											</div>
-									))}
-								</div>
-							</div>
-						)}
+                        <!--
+                        {nearbyAirports.length > 0 && (
+                            <div class="bg-white rounded-lg shadow-sm p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Nearby Airports</h3>
+                                <div class="space-y-3">
+                                    {nearbyAirports.map((airport) => (
+                                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                                <div class="flex-1 min-w-0">
+                                                    <div class="flex items-center space-x-2">
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 whitespace-nowrap flex-shrink-0">
+                                                            {airport.ident}
+                                                        </span>
+                                                        <div class="min-w-0 flex-1">
+                                                            <h4 class="text-sm font-medium text-gray-900 truncate">
+                                                                <a href={`/airports/${airport.ident}`} class="hover:text-blue-600">
+                                                                    {airport.name || airport.ident}
+                                                                </a>
+                                                            </h4>
+                                                            <p class="text-xs text-gray-500 truncate">
+                                                                {airport.municipality ? `${airport.municipality}, ` : ''}{airport.iso_country}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="text-right flex-shrink-0 ml-2">
+                                                    <span class="text-sm text-gray-500">{airport.distance.toFixed(1)} km</span>
+                                                    <div class="mt-1 text-xs" set:html={getTypeBadge(airport.type)}></div>
+                                                </div>
+                                            </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        -->
 
 						<!-- Keywords -->
 						<div id="keywords-section" class="bg-white rounded-lg shadow-sm p-6 hidden">
