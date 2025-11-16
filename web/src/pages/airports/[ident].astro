@@ -117,7 +117,7 @@ const iataCode = airportData.iata_code ? `(${airportData.iata_code})` : '';
 const icaoCode = airportData.icao_code ? `ICAO: ${airportData.icao_code}` : '';
 const codes = [iataCode, icaoCode].filter(c => c).join(' | ');
 const description = `${airportData.name || ident.toUpperCase()} ${codes} in ${airportData.municipality || 'Unknown City'}, ${airportData.iso_country || 'Unknown Country'}. Check real-time flight departures and arrivals, view live flight status, and explore direct flight destinations from this airport.`;
-const canonicalUrl = `https://airport.ayamap.com/airports/${airportData.ident}`;
+const canonicalUrl = `https://airport.ayamap.com/airports/${encodeURIComponent(airportData.name || airportData.ident)}`;
 
 // Helper function for type badges
 function getTypeBadge(type: string | null) {
