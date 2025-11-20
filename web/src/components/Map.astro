@@ -54,8 +54,8 @@ const { latitude, longitude, name, ident, municipality, iso_country } = Astro.pr
     const hasCoords = latStr !== '' && lonStr !== '' && !isNaN(parseFloat(latStr)) && !isNaN(parseFloat(lonStr));
     const detailCenter: [number, number] = hasCoords
         ? [parseFloat(lonStr), parseFloat(latStr)]
-        : [0, 20];
-    const initialZoom = hasCoords ? 12 : 3;
+        : [-120.00, 20.00];
+    const initialZoom = hasCoords ? 12 : 1;
 
     // Initialize map (detail vs homepage)
     const map = new maplibregl.Map({
@@ -97,13 +97,16 @@ const { latitude, longitude, name, ident, municipality, iso_country } = Astro.pr
         // map.setProjection({
         //   type: "globe",
         // });
-        // map.setLight({
-        //   anchor: "map",
-        //   position: [1.5, 90, 80],
-        // });
     });
     // Hide loading indicator when map loads
     map.on("load", () => {
+
+        const attribCtrl = document.querySelector(".maplibregl-ctrl-attrib");
+        if (attribCtrl) {
+        attribCtrl.classList.add("maplibregl-ctrl-compact");
+        attribCtrl.classList.remove("maplibregl-compact-show");
+        }
+
         document.getElementById("map-loading")?.classList.add("hidden");
         // Refs for detail-mode popup/marker so we can close later on empty clicks
         let selectedPopupRef: maplibregl.Popup | null = null;

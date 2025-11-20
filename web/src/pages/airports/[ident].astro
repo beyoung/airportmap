@@ -30,50 +30,15 @@ if (!airportData) {
   return Astro.redirect('/');
 }
 
-// Get nearby airports
-let nearbyAirports: Array<{ident: string, name: string | null, municipality: string | null, iso_country: string | null, type: string | null, distance: number}> = [];
-/* if (airportData.latitude_deg && airportData.longitude_deg) {
-  const latDelta = 100 / 111; // 100km radius
-  const lngDelta = 100 / (111 * Math.cos(airportData.latitude_deg * Math.PI / 180));
-
-  const bounds = {
-    north: airportData.latitude_deg + latDelta,
-    south: airportData.latitude_deg - latDelta,
-    east: airportData.longitude_deg + lngDelta,
-    west: airportData.longitude_deg - lngDelta,
-    limit: 3
-  };
-
-  const allNearby = await airportDb.getAirportsInBounds(bounds);
-
-  // Calculate distances and filter
-  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLng = (lng2 - lng1) * Math.PI / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLng / 2) * Math.sin(dLng / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  };
-
-  nearbyAirports = allNearby
-    .filter(airport => airport.ident !== airportData.ident && airport.latitude_deg && airport.longitude_deg)
-    .map(airport => ({
-      ...airport,
-      distance: calculateDistance(
-        airportData.latitude_deg!,
-        airportData.longitude_deg!,
-        airport.latitude_deg!,
-        airport.longitude_deg!
-      )
-    }))
-    .filter(airport => airport.distance <= 100)
-    .sort((a, b) => a.distance - b.distance)
-    .slice(0, 3);
-} */
+const destinationsList = airportData.destinationsData && airportData.destinationsData.direct_flights ? airportData.destinationsData.direct_flights.slice() : [];
+const destinations = destinationsList.map((d: any) => ({
+  city: d.city,
+  airports: (d.airports || []).filter((a: any) => a.icao || a.iata || a.name)
+}));
+destinations.sort((a: any, b: any) => a.city.localeCompare(b.city));
+for (const d of destinations) { d.airports.sort((a: any, b: any) => (a.name || '').localeCompare(b.name || '')); }
+const totalCities = destinations.length;
+const totalAirports = destinations.reduce((sum: number, d: any) => sum + d.airports.length, 0);
 
 // Get Wikipedia information if available
 let wikipediaInfo = null;
@@ -148,6 +113,17 @@ function getTypeBadge(type: string | null) {
 	<meta property="og:description" content={description} slot="head" />
 	<meta property="og:url" content={canonicalUrl} slot="head" />
 	<meta property="og:type" content="place" slot="head" />
+
+	<script slot="head">
+		(function(){
+			try{history.scrollRestoration='manual'}catch(_){}
+			var h=window.location.hash;
+			if(h==='#location'||h==='#map'){
+				history.replaceState(null,'',window.location.pathname+window.location.search);
+				window.scrollTo(0,0);
+			}
+		})();
+	</script>
 
 	<!-- Structured Data -->
 	<script type="application/ld+json" slot="head">
@@ -224,113 +200,21 @@ function getTypeBadge(type: string | null) {
 		<!-- Content Section -->
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-24 pb-12">
 			<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-				
 				<!-- Left Column (Main Info) -->
 				<div class="lg:col-span-2 space-y-8">
+					<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6 lg:mb-12 xl:mb-16">
+						<nav class="flex flex-wrap items-left justify-left gap-2 sm:gap-3 text-xs sm:text-sm">
+							<a href="#about" class="px-2 py-1 sm:px-3 rounded-full bg-gray-50 hover:bg-primary-50 text-gray-700 hover:text-primary-700 border border-gray-200 text-xs sm:text-sm whitespace-nowrap">About</a>
+							<a href="#basic" class="px-2 py-1 sm:px-3 rounded-full bg-gray-50 hover:bg-primary-50 text-gray-700 hover:text-primary-700 border border-gray-200 text-xs sm:text-sm whitespace-nowrap">Basic</a>
+							<a href="#location" class="px-2 py-1 sm:px-3 rounded-full bg-gray-50 hover:bg-primary-50 text-gray-700 hover:text-primary-700 border border-gray-200 text-xs sm:text-sm whitespace-nowrap">Location</a>
+							<a href="#flight" class="px-2 py-1 sm:px-3 rounded-full bg-gray-50 hover:bg-primary-50 text-gray-700 hover:text-primary-700 border border-gray-200 text-xs sm:text-sm whitespace-nowrap">Flight Information</a>
+							<a href="#destinations" class="px-2 py-1 sm:px-3 rounded-full bg-gray-50 hover:bg-primary-50 text-gray-700 hover:text-primary-700 border border-gray-200 text-xs sm:text-sm whitespace-nowrap">Direct Destinations</a>
+						</nav>
+					</div>
 					
-					<!-- Basic Info Card -->
-					<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
-						<h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-							<span class="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center text-primary-600">
-								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-								</svg>
-							</span>
-							Basic Information
-						</h2>
-						<div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-							<div class="bg-gray-50 rounded-xl p-4">
-								<label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">ICAO Code</label>
-								<p class="text-xl font-semibold text-gray-900">{airportData.ident || '-'}</p>
-							</div>
-							<div class="bg-gray-50 rounded-xl p-4">
-								<label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">IATA Code</label>
-								<p class="text-xl font-semibold text-gray-900">{airportData.iata_code || '-'}</p>
-							</div>
-							<div class="bg-gray-50 rounded-xl p-4">
-								<label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Country</label>
-								<p class="text-lg font-medium text-gray-900">{airportData.iso_country || '-'}</p>
-							</div>
-							<div class="bg-gray-50 rounded-xl p-4">
-								<label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Region</label>
-								<p class="text-lg font-medium text-gray-900">{airportData.iso_region || '-'}</p>
-							</div>
-							<div class="bg-gray-50 rounded-xl p-4">
-								<label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Municipality</label>
-								<p class="text-lg font-medium text-gray-900">{airportData.municipality || '-'}</p>
-							</div>
-							<div class="bg-gray-50 rounded-xl p-4">
-								<label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Elevation</label>
-								<p class="text-lg font-medium text-gray-900">{airportData.elevation_ft ? `${airportData.elevation_ft} ft` : '-'}</p>
-							</div>
-						</div>
-					</div>
-
-					<!-- Location Card -->
-					<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
-						<h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-							<span class="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center text-green-600">
-								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-								</svg>
-							</span>
-							Location
-						</h2>
-						<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-							<div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-								<span class="text-sm text-gray-500 font-medium">Latitude</span>
-								<span class="text-lg font-mono font-semibold text-gray-900">{airportData.latitude_deg ? airportData.latitude_deg.toFixed(6) : '-'}</span>
-							</div>
-							<div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-								<span class="text-sm text-gray-500 font-medium">Longitude</span>
-								<span class="text-lg font-mono font-semibold text-gray-900">{airportData.longitude_deg ? airportData.longitude_deg.toFixed(6) : '-'}</span>
-							</div>
-						</div>
-						
-						{airportData.latitude_deg && airportData.longitude_deg ? (
-							<div class="rounded-xl overflow-hidden shadow-inner border border-gray-200">
-								<MiniMap
-									latitude={airportData.latitude_deg}
-									longitude={airportData.longitude_deg}
-									name={airportData.name || `${airportData.ident} Airport`}
-									ident={airportData.ident}
-									municipality={airportData.municipality || undefined}
-									iso_country={airportData.iso_country || undefined}
-								/>
-							</div>
-						) : (
-							<div class="h-64 rounded-xl overflow-hidden border border-gray-200 flex items-center justify-center bg-gray-50">
-								<p class="text-gray-500 font-medium">Location coordinates not available</p>
-							</div>
-						)}
-					</div>
-
-					<!-- Flight Information -->
-					{airportData.iata_code && (
-						<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
-							<h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-								<span class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
-									<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-									</svg>
-								</span>
-								Flight Information
-							</h2>
-							<div class="avionio-widget rounded-xl overflow-hidden border border-gray-200 shadow-inner">
-								<iframe height="600px" frameborder="0" style="border:0; width: 100%; margin:0; padding:0;" src={`https://www.avionio.com/widget/en/${airportData.iata_code.toLowerCase()}/departures?style=2`}></iframe>
-								<div class="bg-gray-50 py-2 text-center text-xs text-gray-500 border-t border-gray-200">
-									<a class="hover:text-primary-600 transition-colors" href={`https://www.avionio.com/en/airport/${airportData.iata_code.toLowerCase()}/departures`} target="_blank">{airportData.iata_code} Departures</a>
-									<span class="mx-1">•</span>
-									<a class="hover:text-primary-600 transition-colors" href="https://www.avionio.com/" target="_blank">Avionio.com</a>
-								</div>
-							</div>
-						</div>
-					)}
-
 					<!-- Wikipedia Information -->
 					{wikipediaInfo && (
-						<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+						<div id="about" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 mt-8 lg:mt-24 xl:mt-28 scroll-mt-24 md:scroll-mt-28 lg:scroll-mt-36">
 							<h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
 								<span class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600">
 									<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -369,9 +253,110 @@ function getTypeBadge(type: string | null) {
 						</div>
 					)}
 
+					<!-- Basic Info Card -->
+					<div id="basic" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 scroll-mt-24 md:scroll-mt-28 lg:scroll-mt-36">
+						<h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+							<span class="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center text-primary-600">
+								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+								</svg>
+							</span>
+							Basic Information
+						</h2>
+						<div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+							<div class="bg-gray-50 rounded-xl p-4">
+								<label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">ICAO Code</label>
+								<p class="text-xl font-semibold text-gray-900">{airportData.ident || '-'}</p>
+							</div>
+							<div class="bg-gray-50 rounded-xl p-4">
+								<label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">IATA Code</label>
+								<p class="text-xl font-semibold text-gray-900">{airportData.iata_code || '-'}</p>
+							</div>
+							<div class="bg-gray-50 rounded-xl p-4">
+								<label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Country</label>
+								<p class="text-lg font-medium text-gray-900">{airportData.iso_country || '-'}</p>
+							</div>
+							<div class="bg-gray-50 rounded-xl p-4">
+								<label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Region</label>
+								<p class="text-lg font-medium text-gray-900">{airportData.iso_region || '-'}</p>
+							</div>
+							<div class="bg-gray-50 rounded-xl p-4">
+								<label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Municipality</label>
+								<p class="text-lg font-medium text-gray-900">{airportData.municipality || '-'}</p>
+							</div>
+							<div class="bg-gray-50 rounded-xl p-4">
+								<label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Elevation</label>
+								<p class="text-lg font-medium text-gray-900">{airportData.elevation_ft ? `${airportData.elevation_ft} ft` : '-'}</p>
+							</div>
+						</div>
+					</div>
+
+					<!-- Location Card -->
+					<div id="location" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 scroll-mt-24 md:scroll-mt-28 lg:scroll-mt-36">
+						<h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+							<span class="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center text-green-600">
+								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+								</svg>
+							</span>
+							Location
+						</h2>
+						<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+							<div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+								<span class="text-sm text-gray-500 font-medium">Latitude</span>
+								<span class="text-lg font-mono font-semibold text-gray-900">{airportData.latitude_deg ? airportData.latitude_deg.toFixed(6) : '-'}</span>
+							</div>
+							<div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+								<span class="text-sm text-gray-500 font-medium">Longitude</span>
+								<span class="text-lg font-mono font-semibold text-gray-900">{airportData.longitude_deg ? airportData.longitude_deg.toFixed(6) : '-'}</span>
+							</div>
+						</div>
+						
+						{airportData.latitude_deg && airportData.longitude_deg ? (
+							<div class="rounded-xl overflow-hidden shadow-inner border border-gray-200">
+								<Map
+									latitude={airportData.latitude_deg}
+									longitude={airportData.longitude_deg}
+									name={airportData.name || `${airportData.ident} Airport`}
+									ident={airportData.ident}
+									municipality={airportData.municipality || undefined}
+									iso_country={airportData.iso_country || undefined}
+								/>
+							</div>
+						) : (
+							<div class="h-64 rounded-xl overflow-hidden border border-gray-200 flex items-center justify-center bg-gray-50">
+								<p class="text-gray-500 font-medium">Location coordinates not available</p>
+							</div>
+						)}
+					</div>
+
+					<!-- Flight Information -->
+					{airportData.iata_code && (
+						<div id="flight" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 scroll-mt-24 md:scroll-mt-28 lg:scroll-mt-36">
+							<h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+								<span class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+									<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+									</svg>
+								</span>
+								Flight Information
+							</h2>
+							<div class="avionio-widget rounded-xl overflow-hidden border border-gray-200 shadow-inner">
+								<iframe height="600px" frameborder="0" style="border:0; width: 100%; margin:0; padding:0;" src={`https://www.avionio.com/widget/en/${airportData.iata_code.toLowerCase()}/departures?style=2`}></iframe>
+								<div class="bg-gray-50 py-2 text-center text-xs text-gray-500 border-t border-gray-200">
+									<a class="hover:text-primary-600 transition-colors" href={`https://www.avionio.com/en/airport/${airportData.iata_code.toLowerCase()}/departures`} target="_blank">{airportData.iata_code} Departures</a>
+									<span class="mx-1">•</span>
+									<a class="hover:text-primary-600 transition-colors" href="https://www.avionio.com/" target="_blank">Avionio.com</a>
+								</div>
+							</div>
+						</div>
+					)}
+
+			
 					<!-- Direct Flight Destinations -->
-					{airportData.destinationsData && airportData.destinationsData.direct_flights && airportData.destinationsData.direct_flights.length > 0 && (
-						<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+					{destinations && destinations.length > 0 && (
+						<div id="destinations" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 scroll-mt-24 md:scroll-mt-28 lg:scroll-mt-36">
 							<h2 class="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
 								<span class="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600">
 									<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -380,12 +365,17 @@ function getTypeBadge(type: string | null) {
 								</span>
 								Direct Destinations
 							</h2>
-							<p class="text-gray-500 mb-6">
-								Direct flights from {airportData.destinationsData.departure_airport.name} ({airportData.destinationsData.departure_airport.iata})
-							</p>
-							<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-								{airportData.destinationsData.direct_flights.map((destination) => (
-									<div class="border border-gray-200 rounded-xl p-5 hover:border-primary-300 hover:shadow-md transition-all duration-200 bg-gray-50/50">
+							<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
+								<p class="text-gray-500">
+									Direct flights from {airportData.destinationsData.departure_airport.name} ({airportData.destinationsData.departure_airport.iata})
+								</p>
+						<div class="flex items-center gap-2 sm:gap-3">
+							<span id="dest-count" class="text-xs text-gray-500">{totalCities} cities · {totalAirports} airports</span>
+						</div>
+							</div>
+						<div id="destinations-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+								{destinations.map((destination) => (
+									<div class="destination-card border border-gray-200 rounded-xl p-4 md:p-5 hover:border-primary-300 hover:shadow-md transition-all duration-200 bg-gray-50/50" data-city={destination.city.toLowerCase()} data-airports={(destination.airports || []).map((a) => `${(a.name || '').toLowerCase()} ${(a.iata || '').toLowerCase()} ${(a.icao || '').toLowerCase()}`).join(' ')}>
 										<h3 class="font-bold text-gray-900 mb-3 flex items-center gap-2">
 											<span class="text-xl">📍</span>
 											<span>{destination.city}</span>
@@ -393,8 +383,8 @@ function getTypeBadge(type: string | null) {
 										<div class="space-y-2">
 											{destination.airports.map((airport) => (
 												<a
-													href={`/airports/${airport.icao || airport.iata}`}
-													class="block p-3 bg-white rounded-lg border border-gray-100 hover:border-primary-200 hover:bg-primary-50 transition-all group"
+													href={`/airports/${airport.icao || airport.iata || encodeURIComponent(airport.name)}`}
+												class="block p-2.5 md:p-3 bg-white rounded-lg border border-gray-100 hover:border-primary-200 hover:bg-primary-50 transition-all group"
 												>
 													<div class="flex items-center justify-between">
 														<div class="flex-1 min-w-0">
@@ -402,7 +392,7 @@ function getTypeBadge(type: string | null) {
 																{airport.name}
 															</p>
 															<p class="text-xs text-gray-500 font-mono mt-0.5">
-																{airport.iata} / {airport.icao}
+																{(airport.iata || '').toUpperCase()} {(airport.icao ? `/ ${airport.icao}` : '')}
 															</p>
 														</div>
 														<svg class="w-4 h-4 text-gray-300 group-hover:text-primary-500 flex-shrink-0 ml-2 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -420,9 +410,9 @@ function getTypeBadge(type: string | null) {
 				</div>
 
 				<!-- Right Column (Sidebar) -->
-				<div class="space-y-8">
+				<div class="order-last lg:order-none space-y-8">
 					<!-- Quick Actions -->
-					<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+					<div id="quick-actions" class="lg:sticky lg:top-4 z-40 bg-white/95 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-100 p-6">
 						<h3 class="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
 						<div class="space-y-3">
 							<button id="copy-coordinates" class="w-full flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-700 px-4 py-3 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all text-sm font-medium shadow-sm">
@@ -445,55 +435,30 @@ function getTypeBadge(type: string | null) {
 									Official Website
 								</a>
 							)}
-							{airportData.wikipedia_link && (
-								<a href={airportData.wikipedia_link} target="_blank" rel="noopener noreferrer" class="w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-700 px-4 py-3 rounded-xl hover:bg-gray-200 transition-colors text-sm font-medium">
-									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-									</svg>
-									Wikipedia Article
-								</a>
-							)}
-						</div>
+						{airportData.wikipedia_link && (
+							<a href={airportData.wikipedia_link} target="_blank" rel="noopener noreferrer" class="w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-700 px-4 py-3 rounded-xl hover:bg-gray-200 transition-colors text-sm font-medium">
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+								</svg>
+								Wikipedia Article
+							</a>
+						)}
+						<button id="qa-back-top" class="hidden w-full flex items-center justify-center gap-2 bg-primary-50 text-primary-700 px-4 py-3 rounded-xl hover:bg-primary-100 transition-colors text-sm font-medium">
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7 7 7M12 3v18" />
+							</svg>
+							Back to Top
+						</button>
 					</div>
+				</div>
 
-					<!-- Nearby Airports -->
-					{nearbyAirports.length > 0 && (
-						<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-							<h3 class="text-lg font-bold text-gray-900 mb-4">Nearby Airports</h3>
-							<div class="space-y-4">
-								{nearbyAirports.map((airport) => (
-									<a href={`/airports/${airport.ident}`} class="block group">
-										<div class="flex items-start justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
-											<div class="flex-1 min-w-0 mr-3">
-												<div class="flex items-center gap-2 mb-1">
-													<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-gray-100 text-gray-600 font-mono">
-														{airport.ident}
-													</span>
-													<span class="text-xs text-gray-400">{airport.distance.toFixed(1)} km</span>
-												</div>
-												<h4 class="text-sm font-semibold text-gray-900 truncate group-hover:text-primary-600 transition-colors">
-													{airport.name || airport.ident}
-												</h4>
-												<p class="text-xs text-gray-500 truncate mt-0.5">
-													{airport.municipality ? `${airport.municipality}, ` : ''}{airport.iso_country}
-												</p>
-											</div>
-											<div class="mt-1">
-												<div set:html={getTypeBadge(airport.type)}></div>
-											</div>
-										</div>
-									</a>
-								))}
-							</div>
-						</div>
-					)}
 				</div>
 			</div>
 		</div>
 	</main>
 </Layout>
 
-<script define:vars={{ airportData, nearbyAirports, wikipediaInfo }}>
+<script define:vars={{ airportData, wikipediaInfo }}>
 	// Copy coordinates to clipboard
 	async function copyCoordinates() {
 		if (!airportData || !airportData.latitude_deg || !airportData.longitude_deg) return;
@@ -527,6 +492,70 @@ function getTypeBadge(type: string | null) {
 	const copyBtn = document.getElementById('copy-coordinates');
 	if (copyBtn) {
 		copyBtn.addEventListener('click', copyCoordinates);
+	}
+
+	if ('scrollRestoration' in history) {
+		// Prevent browser restoring scroll or jumping to anchors on initial navigation
+		(history as any).scrollRestoration = 'manual';
+	}
+
+	const initialHash = window.location.hash;
+	const blockedHashes = new Set(['#location', '#map']);
+	if (blockedHashes.has(initialHash)) {
+		window.addEventListener('load', () => {
+			history.replaceState(null, '', window.location.pathname + window.location.search);
+			window.scrollTo({ top: 0, behavior: 'auto' });
+		});
+		const suppressUntil = Date.now() + 1500;
+		window.addEventListener('hashchange', () => {
+			if (Date.now() < suppressUntil && blockedHashes.has(window.location.hash)) {
+				history.replaceState(null, '', window.location.pathname + window.location.search);
+				window.scrollTo({ top: 0, behavior: 'auto' });
+			}
+		}, { passive: true });
+	}
+
+	const filterInputEl = document.getElementById('dest-filter');
+	if (filterInputEl && filterInputEl instanceof HTMLInputElement) {
+		const cards = Array.from(document.querySelectorAll('.destination-card'));
+		const countEl = document.getElementById('dest-count');
+		function applyFilter() {
+			const q = filterInputEl.value.trim().toLowerCase();
+			let visible = 0;
+			let airportsVisible = 0;
+			for (const card of cards) {
+				const city = card.getAttribute('data-city') || '';
+				const airports = card.getAttribute('data-airports') || '';
+				const match = q === '' || city.includes(q) || airports.includes(q);
+				card.classList.toggle('hidden', !match);
+				if (match) {
+					visible += 1;
+					airportsVisible += card.querySelectorAll('a').length;
+				}
+			}
+			if (countEl) countEl.textContent = `${visible} cities · ${airportsVisible} airports`;
+		}
+		filterInputEl.addEventListener('input', applyFilter);
+	}
+
+	const qaBackTopBtn = document.getElementById('qa-back-top');
+	const qaContainer = document.getElementById('quick-actions');
+	if (qaBackTopBtn) {
+		function toggleQaBackTop() {
+			const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
+			let show = false;
+			if (isDesktop && qaContainer) {
+				const top = qaContainer.getBoundingClientRect().top;
+				show = top <= 24;
+			} else {
+				const nearBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 120;
+				show = nearBottom;
+			}
+			qaBackTopBtn.classList.toggle('hidden', !show);
+		}
+		window.addEventListener('scroll', toggleQaBackTop, { passive: true });
+		qaBackTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+		toggleQaBackTop();
 	}
 </script>
 
