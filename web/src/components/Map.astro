@@ -88,10 +88,11 @@ const { latitude, longitude, name, ident, municipality, iso_country } = Astro.pr
         maxZoom: 16,
         minZoom: 1,
     });
+    map.addControl(new maplibregl.NavigationControl());
     map.addControl(new maplibregl.GlobeControl());
     map.addControl(new maplibregl.FullscreenControl());
-    map.addControl(new maplibregl.NavigationControl());
-
+    map.addControl(new maplibregl.GeolocateControl());
+    
     map.on("style.load", () => {
         // map.setProjection({
         //   type: "globe",
