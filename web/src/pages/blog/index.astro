@@ -2,13 +2,16 @@
 import Layout from "../../layouts/Layout.astro";
 import { getCollection } from "astro:content";
 
-// 获取所有博客文章
+// Get all blog posts
 const blogPosts = await getCollection("blog");
 
-// 按日期排序（最新的在前）
+// Sort by date (newest first)
 const sortedPosts = blogPosts.sort((a, b) => 
   new Date(b.data.publishDate).getTime() - new Date(a.data.publishDate).getTime()
 );
+
+const featuredPost = sortedPosts[0];
+const otherPosts = sortedPosts.slice(1);
 
 const title = "Blog - AyaMap Airports";
 const description = "Latest news, insights, and updates about airports, aviation, and travel from AyaMap.";
@@ -42,97 +45,182 @@ const description = "Latest news, insights, and updates about airports, aviation
     }
   </script>
 
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="max-w-4xl mx-auto">
+  <div class="bg-gradient-to-b from-primary-50/50 to-white min-h-screen">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
       <!-- Page Header -->
-      <div class="text-center mb-12">
-        <h1 class="text-4xl font-bold text-gray-900 mb-4">
-          Aviation Blog
+      <div class="text-center max-w-3xl mx-auto mb-16 space-y-4">
+        <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 tracking-tight">
+          Aviation <span class="text-primary-600">Insights</span>
         </h1>
-        <p class="text-xl text-gray-600 max-w-2xl mx-auto">
-          Discover the latest insights, news, and stories from the world of aviation and airports.
+        <p class="text-xl text-gray-600 leading-relaxed">
+          Discover the latest news, in-depth stories, and expert analysis from the world of airports and aviation.
         </p>
       </div>
 
-      <!-- Blog Posts Grid -->
-      <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-        {sortedPosts.map((post) => (
-          <article class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-            {post.data.heroImage && (
-              <img 
-                src={post.data.heroImage} 
-                alt={post.data.title}
-                class="w-full h-48 object-cover"
-              />
-            )}
-            <div class="p-6">
-              <div class="flex items-center text-sm text-gray-500 mb-2">
-                <time datetime={post.data.publishDate.toISOString()}>
-                  {post.data.publishDate.toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </time>
-                {post.data.author && (
-                  <>
-                    <span class="mx-2">•</span>
-                    <span>{post.data.author}</span>
-                  </>
-                )}
-              </div>
-              
-              <h2 class="text-xl font-semibold text-gray-900 mb-3">
-                <a href={`/blog/${post.slug}`} class="hover:text-primary-600 transition-colors">
-                  {post.data.title}
-                </a>
-              </h2>
-              
-              {post.data.description && (
-                <p class="text-gray-600 mb-4 line-clamp-3">
-                  {post.data.description}
-                </p>
-              )}
-              
-              {post.data.tags && post.data.tags.length > 0 && (
-                <div class="flex flex-wrap gap-2 mb-4">
-                  {post.data.tags.map((tag) => (
-                    <span class="px-2 py-1 bg-primary-100 text-primary-700 text-xs rounded-full">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-              
-              <a 
-                href={`/blog/${post.slug}`}
-                class="inline-flex items-center text-primary-600 hover:text-primary-700 font-medium"
-              >
-                Read more
-                <svg class="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                </svg>
-              </a>
-            </div>
-          </article>
-        ))}
-      </div>
+      {sortedPosts.length > 0 ? (
+        <div class="space-y-16">
+          {/* Featured Post */}
+          {featuredPost && (
+            <section>
+              <h2 class="sr-only">Featured Post</h2>
+              <article class="relative group bg-white rounded-3xl shadow-xl overflow-hidden hover:shadow-2xl transition-all duration-300 border border-gray-100">
+                <div class="grid lg:grid-cols-2 gap-0">
+                  <div class="relative h-64 lg:h-auto overflow-hidden">
+                    {featuredPost.data.heroImage && (
+                      <img 
+                        src={featuredPost.data.heroImage} 
+                        alt={featuredPost.data.title}
+                        class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+                      />
+                    )}
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent lg:hidden"></div>
+                  </div>
+                  <div class="p-8 lg:p-12 flex flex-col justify-center">
+                    <div class="flex items-center gap-3 text-sm mb-4">
+                      <span class="px-3 py-1 bg-primary-100 text-primary-700 rounded-full font-medium text-xs uppercase tracking-wider">
+                        Featured
+                      </span>
+                      <time datetime={featuredPost.data.publishDate.toISOString()} class="text-gray-500">
+                        {featuredPost.data.publishDate.toLocaleDateString('en-US', {
+                          month: 'long',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </time>
+                    </div>
+                    
+                    <h3 class="text-2xl lg:text-3xl font-bold text-gray-900 mb-4 group-hover:text-primary-600 transition-colors">
+                      <a href={`/blog/${featuredPost.slug}`}>
+                        {featuredPost.data.title}
+                      </a>
+                    </h3>
+                    
+                    {featuredPost.data.description && (
+                      <p class="text-gray-600 text-lg mb-6 line-clamp-3">
+                        {featuredPost.data.description}
+                      </p>
+                    )}
 
-      {sortedPosts.length === 0 && (
-        <div class="text-center py-12">
-          <h2 class="text-2xl font-semibold text-gray-900 mb-4">No blog posts yet</h2>
-          <p class="text-gray-600">Check back soon for the latest aviation insights and news!</p>
+                    <div class="flex items-center justify-between mt-auto">
+                      {featuredPost.data.author && (
+                        <div class="flex items-center gap-2">
+                          <div class="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-sm">
+                            {featuredPost.data.author[0]}
+                          </div>
+                          <span class="text-sm font-medium text-gray-900">{featuredPost.data.author}</span>
+                        </div>
+                      )}
+                      <a 
+                        href={`/blog/${featuredPost.slug}`}
+                        class="inline-flex items-center text-primary-600 font-semibold hover:text-primary-700 transition-colors group/link"
+                      >
+                        Read Article
+                        <svg class="w-5 h-5 ml-2 transform group-hover/link:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                        </svg>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            </section>
+          )}
+
+          {/* Recent Posts Grid */}
+          {otherPosts.length > 0 && (
+            <section>
+              <div class="flex items-center justify-between mb-8">
+                <h2 class="text-2xl font-bold text-gray-900">Recent Articles</h2>
+              </div>
+              <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {otherPosts.map((post) => (
+                  <article class="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 flex flex-col overflow-hidden h-full">
+                    <a href={`/blog/${post.slug}`} class="relative h-48 overflow-hidden block">
+                      {post.data.heroImage ? (
+                        <img 
+                          src={post.data.heroImage} 
+                          alt={post.data.title}
+                          class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div class="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400">
+                          <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                      )}
+                      <div class="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300"></div>
+                    </a>
+                    
+                    <div class="p-6 flex flex-col flex-grow">
+                      <div class="flex items-center gap-2 mb-3">
+                        {post.data.tags && post.data.tags[0] && (
+                          <span class="px-2.5 py-0.5 bg-primary-50 text-primary-700 text-xs font-medium rounded-full">
+                            {post.data.tags[0]}
+                          </span>
+                        )}
+                        <time datetime={post.data.publishDate.toISOString()} class="text-xs text-gray-500">
+                          {post.data.publishDate.toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </time>
+                      </div>
+
+                      <h3 class="text-xl font-bold text-gray-900 mb-3 line-clamp-2 group-hover:text-primary-600 transition-colors">
+                        <a href={`/blog/${post.slug}`}>
+                          {post.data.title}
+                        </a>
+                      </h3>
+
+                      {post.data.description && (
+                        <p class="text-gray-600 text-sm mb-4 line-clamp-3 flex-grow">
+                          {post.data.description}
+                        </p>
+                      )}
+
+                      <div class="pt-4 mt-auto border-t border-gray-100 flex items-center justify-between">
+                        {post.data.author ? (
+                          <span class="text-xs font-medium text-gray-500">By {post.data.author}</span>
+                        ) : <span></span>}
+                        <a 
+                          href={`/blog/${post.slug}`}
+                          class="text-sm font-semibold text-primary-600 hover:text-primary-700 inline-flex items-center group/link"
+                        >
+                          Read
+                          <svg class="w-4 h-4 ml-1 transform group-hover/link:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                          </svg>
+                        </a>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
+      ) : (
+        <div class="text-center py-24 bg-white rounded-3xl shadow-sm border border-gray-100">
+          <div class="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+            </svg>
+          </div>
+          <h2 class="text-2xl font-bold text-gray-900 mb-2">No stories yet</h2>
+          <p class="text-gray-600 max-w-md mx-auto">
+            We're working on crafting interesting stories for you. Check back soon for updates!
+          </p>
         </div>
       )}
-    </div>
-  </main>
+    </main>
+  </div>
 </Layout>
 
 <style>
-  .line-clamp-3 {
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+  /* Custom scrollbar for smooth scrolling if needed */
+  html {
+    scroll-behavior: smooth;
   }
 </style>

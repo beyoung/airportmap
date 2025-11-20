@@ -75,103 +75,122 @@ const canonicalUrl = `https://airport.ayamap.com/blog/${post.slug}`;
     }
   </script>
 
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="max-w-4xl mx-auto">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-12">
+    <div class="max-w-3xl mx-auto">
       <!-- Breadcrumb -->
-      <nav class="mb-8" aria-label="Breadcrumb">
-        <ol class="flex items-center space-x-2 text-sm text-gray-500">
-          <li><a href="/" class="hover:text-primary-600">Home</a></li>
-          <li><span class="mx-2">/</span></li>
-          <li><a href="/blog" class="hover:text-primary-600">Blog</a></li>
-          <li><span class="mx-2">/</span></li>
-          <li class="text-gray-900 truncate">{post.data.title}</li>
+      <nav class="mb-6 md:mb-8" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm text-gray-500 overflow-hidden whitespace-nowrap">
+          <li><a href="/" class="hover:text-primary-600 transition-colors">Home</a></li>
+          <li><span class="mx-1 text-gray-400">/</span></li>
+          <li><a href="/blog" class="hover:text-primary-600 transition-colors">Blog</a></li>
+          <li><span class="mx-1 text-gray-400">/</span></li>
+          <li class="text-gray-900 truncate font-medium">{post.data.title}</li>
         </ol>
       </nav>
 
       <!-- Article Header -->
-      <header class="mb-8">
-        {post.data.heroImage && (
-          <img 
-            src={post.data.heroImage} 
-            alt={post.data.title}
-            class="w-full h-64 md:h-96 object-cover rounded-lg mb-8"
-          />
-        )}
-        
-        <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-          {post.data.title}
-        </h1>
-        
-        {post.data.description && (
-          <p class="text-xl text-gray-600 mb-6">
-            {post.data.description}
-          </p>
-        )}
-        
-        <div class="flex flex-wrap items-center gap-4 text-sm text-gray-500 mb-6">
-          <time datetime={post.data.publishDate.toISOString()}>
-            {post.data.publishDate.toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })}
-          </time>
-          
-          {post.data.author && (
-            <>
-              <span>•</span>
-              <span>By {post.data.author}</span>
-            </>
-          )}
-        </div>
-        
-        {post.data.tags && post.data.tags.length > 0 && (
-          <div class="flex flex-wrap gap-2">
-            {post.data.tags.map((tag) => (
-              <span class="px-3 py-1 bg-primary-100 text-primary-700 text-sm rounded-full">
-                {tag}
+      <header class="mb-8 md:mb-12">
+        <div class="space-y-4 text-center md:text-left">
+          <div class="flex flex-wrap items-center justify-center md:justify-start gap-3 text-sm text-gray-500 mb-4">
+            {post.data.tags && post.data.tags.length > 0 && (
+              <span class="px-3 py-1 bg-primary-50 text-primary-700 text-xs font-medium rounded-full uppercase tracking-wider">
+                {post.data.tags[0]}
               </span>
-            ))}
+            )}
+            <time datetime={post.data.publishDate.toISOString()} class="font-medium">
+              {post.data.publishDate.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </time>
+          </div>
+
+          <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight leading-tight mb-6">
+            {post.data.title}
+          </h1>
+
+          {post.data.description && (
+            <p class="text-lg sm:text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto md:mx-0">
+              {post.data.description}
+            </p>
+          )}
+
+          <div class="flex items-center justify-center md:justify-start gap-3 pt-4">
+            {post.data.author && (
+              <div class="flex items-center gap-2">
+                <div class="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-sm">
+                  {post.data.author[0]}
+                </div>
+                <div class="text-left">
+                  <p class="text-sm font-bold text-gray-900">{post.data.author}</p>
+                  <p class="text-xs text-gray-500">Author</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {post.data.heroImage && (
+          <div class="mt-8 md:mt-12 relative rounded-2xl overflow-hidden shadow-xl aspect-video">
+            <img 
+              src={post.data.heroImage} 
+              alt={post.data.title}
+              class="absolute inset-0 w-full h-full object-cover"
+            />
           </div>
         )}
       </header>
 
       <!-- Article Content -->
-      <article class="prose prose-lg prose-slate max-w-none mx-auto">
+      <article class="prose prose-base md:prose-lg prose-slate max-w-none mx-auto">
         <Content />
       </article>
 
-      <!-- Contact Section -->
-      <div class="mt-12 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
-        <div class="text-center">
-          <h3 class="text-xl font-semibold text-gray-900 mb-3">
-            Have a story idea or feedback?
-          </h3>
-          <p class="text-gray-600 mb-4">
-            We'd love to hear from you. Connect with us through
-          </p>
-          <a 
-            href="mailto:airport@ayamap.com"
-            class="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md hover:shadow-lg"
-          >
-            <svg class="mr-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-            airport@ayamap.com
-          </a>
+      <!-- Tags Footer -->
+      {post.data.tags && post.data.tags.length > 0 && (
+        <div class="mt-12 pt-8 border-t border-gray-100">
+          <div class="flex flex-wrap gap-2">
+            {post.data.tags.map((tag) => (
+              <a href={`/blog`} class="px-3 py-1.5 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200 transition-colors">
+                #{tag}
+              </a>
+            ))}
+          </div>
         </div>
+      )}
+
+      <!-- Contact Section -->
+      <div class="mt-12 p-8 bg-gradient-to-br from-primary-50 to-white rounded-2xl border border-primary-100 shadow-sm text-center md:text-left md:flex md:items-center md:justify-between gap-6">
+        <div>
+          <h3 class="text-xl font-bold text-gray-900 mb-2">
+            Have a story idea?
+          </h3>
+          <p class="text-gray-600">
+            We'd love to hear your feedback and suggestions.
+          </p>
+        </div>
+        <a 
+          href="mailto:airport@ayamap.com"
+          class="mt-4 md:mt-0 inline-flex items-center justify-center px-6 py-3 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+        >
+          <svg class="mr-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+          Contact Us
+        </a>
       </div>
 
       <!-- Back to Blog -->
-      <div class="mt-8 pt-8 border-t border-gray-200">
+      <div class="mt-12 text-center">
         <a 
           href="/blog"
-          class="inline-flex items-center text-primary-600 hover:text-primary-700 font-medium"
+          class="inline-flex items-center text-gray-500 hover:text-primary-600 font-medium transition-colors group"
         >
-          <svg class="mr-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="mr-2 w-4 h-4 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
-          Back to Blog
+          Back to All Articles
         </a>
       </div>
     </div>
@@ -185,157 +204,137 @@ const canonicalUrl = `https://airport.ayamap.com/blog/${post.slug}`;
       window.Prism.highlightAll();
     }
   });
+
+  // 自动为表格添加滚动容器
+  document.addEventListener('DOMContentLoaded', () => {
+    const tables = document.querySelectorAll('.prose table');
+    tables.forEach(table => {
+      // Check if already wrapped
+      if (table.parentElement && table.parentElement.classList.contains('overflow-x-auto')) {
+        return;
+      }
+      
+      const wrapper = document.createElement('div');
+      wrapper.className = 'overflow-x-auto my-8 rounded-lg border border-gray-200';
+      table.parentNode?.insertBefore(wrapper, table);
+      wrapper.appendChild(table);
+    });
+  });
 </script>
 
-<style>
-  /* 基础文本样式 */
+<style is:global>
+  /* Global Prose Styles */
   .prose {
-    @apply text-gray-800 leading-relaxed;
-    line-height: 1.75;
+    @apply text-gray-800;
+    max-width: 65ch;
   }
-  
-  /* 标题样式优化 */
-  .prose h1 {
-    @apply text-4xl font-bold text-gray-900 mt-12 mb-6 leading-tight;
-    border-bottom: 3px solid #e5e7eb;
-    padding-bottom: 0.5rem;
+
+  /* Typography */
+  .prose h1, .prose h2, .prose h3, .prose h4 {
+    @apply text-gray-900 font-bold tracking-tight;
   }
-  
+
   .prose h2 {
-    @apply text-3xl font-semibold text-gray-900 mt-10 mb-5 leading-tight;
-    border-bottom: 2px solid #f3f4f6;
-    padding-bottom: 0.375rem;
+    @apply text-2xl md:text-3xl mt-12 mb-6 pb-2 border-b border-gray-100;
   }
-  
+
   .prose h3 {
-    @apply text-2xl font-semibold text-gray-900 mt-8 mb-4 leading-tight;
+    @apply text-xl md:text-2xl mt-8 mb-4;
   }
-  
-  .prose h4 {
-    @apply text-xl font-medium text-gray-900 mt-6 mb-3 leading-tight;
-  }
-  
-  .prose h5, .prose h6 {
-    @apply text-lg font-medium text-gray-900 mt-6 mb-3 leading-tight;
-  }
-  
-  /* 段落样式 */
+
   .prose p {
-    @apply mb-6 text-base leading-relaxed;
+    @apply leading-relaxed mb-6;
   }
-  
-  /* 链接样式 */
+
   .prose a {
-    @apply text-blue-600 hover:text-blue-800 underline decoration-2 underline-offset-2 transition-colors duration-200;
+    @apply text-primary-600 no-underline border-b border-primary-200 hover:border-primary-600 transition-colors;
   }
-  
-  /* 列表样式优化 */
+
+  .prose strong {
+    @apply font-bold text-gray-900;
+  }
+
+  /* Lists */
   .prose ul {
-    @apply mb-6 pl-6 space-y-2;
+    @apply list-disc list-outside ml-6 mb-6 space-y-2 marker:text-primary-500;
   }
-  
+
   .prose ol {
-    @apply mb-6 pl-6 space-y-2;
+    @apply list-decimal list-outside ml-6 mb-6 space-y-2 marker:text-primary-500;
   }
-  
-  .prose li {
-    @apply text-base leading-relaxed;
-  }
-  
-  .prose ul > li {
-    @apply relative;
-  }
-  
-  .prose ul > li::before {
-    content: "•";
-    @apply absolute -left-4 text-blue-500 font-bold;
-  }
-  
-  /* 引用块样式 */
+
+  /* Blockquotes */
   .prose blockquote {
-    @apply border-l-4 border-blue-400 bg-blue-50 pl-6 pr-4 py-4 italic text-gray-700 my-8 rounded-r-lg;
+    @apply border-l-4 border-primary-500 bg-gray-50 pl-6 pr-4 py-4 italic text-gray-700 rounded-r-lg my-8;
   }
-  
-  .prose blockquote p {
-    @apply mb-0 text-lg;
-  }
-  
-  /* 代码样式优化 */
-  .prose code {
-    @apply bg-gray-100 text-gray-800 px-2 py-1 rounded-md text-sm font-mono border;
-    font-size: 0.875em;
-  }
-  
+
+  /* Code Blocks */
   .prose pre {
-    @apply bg-gray-900 text-gray-100 p-6 rounded-xl overflow-x-auto my-8 shadow-lg;
-    font-size: 0.875rem;
-    line-height: 1.6;
+    @apply bg-gray-900 text-gray-100 p-4 md:p-6 rounded-xl overflow-x-auto my-8 shadow-lg border border-gray-800;
   }
-  
+
+  .prose code {
+    @apply bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded text-sm font-mono border border-gray-200;
+  }
+
   .prose pre code {
     @apply bg-transparent p-0 text-gray-100 border-0;
   }
-  
-  /* 图片样式 */
+
+  /* Images */
   .prose img {
-    @apply rounded-xl my-8 shadow-md w-full;
+    @apply rounded-xl my-8 shadow-md w-full h-auto;
   }
-  
-  /* 表格样式 */
+
+  /* Tables */
   .prose table {
-    @apply w-full border-collapse my-8 bg-white rounded-lg overflow-hidden shadow-sm;
+    @apply w-full text-left border-collapse bg-white;
   }
-  
+
   .prose th {
-    @apply bg-gray-50 px-4 py-3 text-left font-semibold text-gray-900 border-b border-gray-200;
+    @apply bg-gray-50 px-4 py-3 font-semibold text-gray-900 border-b border-gray-200 whitespace-nowrap;
   }
-  
+
   .prose td {
-    @apply px-4 py-3 border-b border-gray-100;
+    @apply px-4 py-3 border-b border-gray-100 align-top;
   }
-  
-  .prose tr:hover {
-    @apply bg-gray-50;
+
+  .prose tr:last-child td {
+    @apply border-b-0;
   }
-  
-  /* 分隔线样式 */
-  .prose hr {
-    @apply my-12 border-0 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent;
+
+  .prose tr:hover td {
+    @apply bg-gray-50/50;
   }
-  
-  /* 强调文本 */
-  .prose strong {
-    @apply font-semibold text-gray-900;
-  }
-  
-  .prose em {
-    @apply italic text-gray-700;
-  }
-  
-  /* 响应式设计 */
+
+  /* Mobile Optimizations */
   @media (max-width: 768px) {
     .prose {
-      @apply text-sm;
+      font-size: 1.0625rem; /* 17px for better readability */
+      line-height: 1.75;
     }
-    
-    .prose h1 {
-      @apply text-3xl mt-8 mb-4;
-    }
-    
+
     .prose h2 {
-      @apply text-2xl mt-6 mb-3;
+      @apply text-2xl mt-10 mb-5;
     }
-    
+
     .prose h3 {
-      @apply text-xl mt-6 mb-3;
+      @apply text-xl mt-8 mb-4;
     }
-    
+
     .prose pre {
-      @apply p-4 text-xs;
+      @apply -mx-4 rounded-none border-x-0; /* Full width code blocks on mobile */
     }
     
-    .prose blockquote {
-      @apply pl-4 pr-3 py-3;
+    .prose img {
+      @apply -mx-4 w-[calc(100%+2rem)] max-w-[calc(100%+2rem)] rounded-none; /* Full width images on mobile */
+    }
+    
+    /* Ensure tables are scrollable on mobile if JS fails or as backup */
+    .prose table {
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
     }
   }
 </style>
