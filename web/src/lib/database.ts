@@ -134,11 +134,11 @@ export class AirportDatabase {
     // Build WHERE conditions
     if (query) {
       whereConditions.push(`(
-        a.iata_code LIKE ? OR
-        a.icao_code LIKE ? OR
-        a.name LIKE ? OR
-        a.municipality LIKE ? OR
-        a.country_name LIKE ?
+        a.iata_code = ? OR
+        a.icao_code = ? OR
+        a.name = ? OR
+        a.municipality = ? OR
+        a.country_name = ?
       )`);
       const searchTerm = `%${query}%`;
       params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
@@ -178,12 +178,6 @@ export class AirportDatabase {
         a.*
       FROM airport a
       ${whereClause}
-      ORDER BY
-        CASE WHEN a.type = 'large_airport' THEN 1
-             WHEN a.type = 'medium_airport' THEN 2
-             WHEN a.type = 'small_airport' THEN 3
-             ELSE 4 END,
-        a.name
       LIMIT ? OFFSET ?
     `;
 
@@ -278,12 +272,6 @@ export class AirportDatabase {
       SELECT a.*
       FROM airport a
       WHERE a.iso_country = ? OR a.country_name = ?
-      ORDER BY
-        CASE WHEN a.type = 'large_airport' THEN 1
-             WHEN a.type = 'medium_airport' THEN 2
-             WHEN a.type = 'small_airport' THEN 3
-             ELSE 4 END,
-        a.name
       LIMIT ?
     `;
     const results = await this.db
@@ -358,79 +346,47 @@ export class AirportDatabase {
   async getCountryStatsByCode(
     countryCode: string,
   ): Promise<CountryStats | null> {
-    const query = `
-      SELECT
-        country_code as country,
-        country_name,
-        airport_count,
-        large_airport_count,
-        medium_airport_count,
-        small_airport_count,
-        heliport_count,
-        seaplane_base_count,
-        other_count
-      FROM country_stats
-      WHERE country_code = ?
+   const query = `
+      SELECT *
+      FROM country_stats where country_code=?
     `;
 
-    const result = await this.db
+    const results = await this.db
       .prepare(query)
-      .bind(countryCode.toUpperCase())
-      .first();
+      .bind(countryCode)
+      .all();
 
-    if (!result) {
-      return null;
-    }
-
-    return {
-      country: result.country,
-      country_name: result.country_name,
-      airport_count: result.airport_count,
-      large_airport_count: result.large_airport_count || 0,
-      medium_airport_count: result.medium_airport_count || 0,
-      small_airport_count: result.small_airport_count || 0,
-      heliport_count: result.heliport_count || 0,
-      seaplane_base_count: result.seaplane_base_count || 0,
-      other_count: result.other_count || 0,
-    };
+    return results.results?.map((row: any) => ({
+      country: row.country_code,
+      country_name: row.country_name,
+      airport_count: row.airport_count,
+      large_airport_count: row.large_airport_count || 0,
+      medium_airport_count: row.medium_airport_count || 0,
+      small_airport_count: row.small_airport_count || 0,
+      heliport_count: row.heliport_count || 0,
+      seaplane_base_count: row.seaplane_base_count || 0,
+      other_count: row.other_count || 0,
+    }))[0] || null;
   }
 
   /**
    * Get airports within a bounding box (for map display)
    */
   async getAirportsInBounds({
-    north,
-    south,
-    east,
-    west,
     limit = 1000,
     offset = 0,
   }: {
-    north: number;
-    south: number;
-    east: number;
-    west: number;
     limit?: number;
     offset?: number;
   }): Promise<Airport[]> {
     const query = `
       SELECT *
-      FROM airport
-      WHERE latitude_deg BETWEEN ? AND ?
-        AND longitude_deg BETWEEN ? AND ?
-        AND latitude_deg IS NOT NULL
-        AND longitude_deg IS NOT NULL
-      ORDER BY
-        CASE WHEN type = 'large_airport' THEN 1
-             WHEN type = 'medium_airport' THEN 2
-             WHEN type = 'small_airport' THEN 3
-             ELSE 4 END
-      LIMIT ? OFFSET ?
+      FROM airport ORDER BY id LIMIT ? OFFSET ?
     `;
 
     const results = await this.db
       .prepare(query)
-      .bind(south, north, west, east, limit, offset)
+      .bind(limit, offset)
       .all();
 
     return results.results || [];

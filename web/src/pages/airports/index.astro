@@ -14,7 +14,7 @@ const currentPage = parseInt(url.searchParams.get("page") || "1");
 const searchQuery = url.searchParams.get("q") || "";
 const countryFilter = url.searchParams.get("country") || "";
 const typeFilter = url.searchParams.get("type") || "";
-const itemsPerPage = 18;
+const itemsPerPage = 9;
 
 // Get database from Astro locals
 const dbInstance =
@@ -213,7 +213,7 @@ function buildUrl(params: Record<string, string | number>) {
         </div>
 
         <!-- Search and Filter Section -->
-        <div
+        <!-- <div
             class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm"
         >
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -307,7 +307,7 @@ function buildUrl(params: Record<string, string | number>) {
                     </div>
                 </form>
             </div>
-        </div>
+        </div> -->
 
         <!-- Results Section -->
         <section class="py-8 lg:py-12">

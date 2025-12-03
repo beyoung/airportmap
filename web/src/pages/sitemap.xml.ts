@@ -12,10 +12,6 @@ export const GET: APIRoute = async ({ locals }) => {
 
     // Get total airport count to calculate number of airport sitemap pages
     const airports = await airportDb.getAirportsInBounds({
-      north: 90,
-      south: -90,
-      east: 180,
-      west: -180,
       limit: 100000, // Get a large number to count total
     });
 
