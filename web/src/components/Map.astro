@@ -67,10 +67,11 @@ const { latitude, longitude, name, ident, municipality, iso_country } = Astro.pr
                 "raster-tiles": {
                     type: "raster",
                     tiles: [
-                        "https://api.maptiler.com/maps/satellite/256/{z}/{x}/{y}.jpg?key=48F3wFYg8K0uzswJ8cdr",
+                        // "https://basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}@2x.png",
+                        "https://basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}@2x.png"
                     ],
-                    tileSize: 256,
-                    attribution: "© OpenStreetMap contributors",
+                    tileSize: 512,
+                    attribution: "© CARTO, © OpenStreetMap contributors",
                 },
             },
             layers: [
