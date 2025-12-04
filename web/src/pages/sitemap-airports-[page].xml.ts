@@ -35,7 +35,7 @@ export const GET: APIRoute = async ({ locals, params }) => {
     const offset = (page - 1) * AIRPORTS_PER_PAGE;
 
     // Get airports for this page
-    const airports = await airportDb.getAirportsForSitemap({
+    const airports = await airportDb.getAirportsWithPage({
       limit: AIRPORTS_PER_PAGE,
       offset: offset,
     });

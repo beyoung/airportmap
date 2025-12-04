@@ -4,6 +4,29 @@
 npm create astro@latest -- --template minimal
 ```
 
+## db dump/import
+```sh
+
+npx wrangler d1 export airports-db --remote --output=./airports-db.sql
+
+
+# To export single table schema and data:
+wrangler d1 export airports-db --remote --output=./airports-schema.sql --no-data
+
+wrangler d1 execute airports-db --file=./airports-schema.sql
+wrangler d1 execute airports-db --file=./airports-db.sql
+
+
+cat airports-address.sql | wrangler d1 execute airports-db --local
+
+split -l 1000 airports-address.sql chunk-
+
+for f in chunk-*; do
+  wrangler d1 execute airports-db --file=$f
+done
+
+```
+
 > 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
 
 ## 🚀 Project Structure

@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { AirportDatabase } from "../lib/database";
+const AirportCount = 83247;
 
 export const GET: APIRoute = async ({ locals }) => {
   try {
@@ -8,15 +8,8 @@ export const GET: APIRoute = async ({ locals }) => {
       return new Response("Database not available", { status: 500 });
     }
 
-    const airportDb = new AirportDatabase(db);
-
-    // Get total airport count to calculate number of airport sitemap pages
-    const airports = await airportDb.getAirportsInBounds({
-      limit: 100000, // Get a large number to count total
-    });
-
     const AIRPORTS_PER_PAGE = 3000;
-    const totalAirportPages = Math.ceil(airports.length / AIRPORTS_PER_PAGE);
+    const totalAirportPages = Math.ceil(AirportCount / AIRPORTS_PER_PAGE);
 
     const baseUrl = "https://airport.ayamap.com";
     const currentDate = new Date().toISOString().split("T")[0];

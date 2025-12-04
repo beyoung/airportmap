@@ -15,7 +15,7 @@ const page = parseInt(url.searchParams.get("page") || "1");
 const query = url.searchParams.get("q") || "";
 const type = url.searchParams.get("type") || "";
 const sort = url.searchParams.get("sort") || "name";
-const limit = 18;
+const limit = 9;
 
 // Get database from Astro locals
 const dbInstance =
@@ -39,64 +39,16 @@ try {
     countryStats = await db.getCountryStatsByCode(country.toUpperCase());
 
     // Get all airports for the country
-    const allAirports = await db.getAirportsByCountry(country.toUpperCase());
+    const allAirports = await db.getAirportsByCountry(country.toUpperCase(), limit, page);
 
-    // Apply filtering
-    let filteredAirports = allAirports;
-
-    if (query) {
-        filteredAirports = filteredAirports.filter(
-            (airport) =>
-                (airport.name || "")
-                    .toLowerCase()
-                    .includes(query.toLowerCase()) ||
-                (airport.ident || "")
-                    .toLowerCase()
-                    .includes(query.toLowerCase()) ||
-                (airport.municipality || "")
-                    .toLowerCase()
-                    .includes(query.toLowerCase()),
-        );
-    }
-
-    if (type) {
-        filteredAirports = filteredAirports.filter(
-            (airport) => airport.type === type,
-        );
-    }
-
-    // Apply sorting
-    filteredAirports.sort((a, b) => {
-        switch (sort) {
-            case "type":
-                const typeOrder = {
-                    large_airport: 1,
-                    medium_airport: 2,
-                    small_airport: 3,
-                };
-                const aType =
-                    typeOrder[a.type as keyof typeof typeOrder] || 999;
-                const bType =
-                    typeOrder[b.type as keyof typeof typeOrder] || 999;
-                return aType - bType;
-            case "municipality":
-                const aMuni = a.municipality || "";
-                const bMuni = b.municipality || "";
-                return aMuni.localeCompare(bMuni);
-            default: // name
-                const aName = a.name || a.ident || "";
-                const bName = b.name || b.ident || "";
-                return aName.localeCompare(bName);
-        }
-    });
+   
 
     // Apply pagination
-    const total = filteredAirports.length;
+    // const total = filteredAirports.length;
+    const total = countryStats?.airport_count || 0;
     const totalPages = Math.ceil(total / limit) || 1;
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
 
-    airports = filteredAirports.slice(startIndex, endIndex);
+    airports = allAirports;
 
     pagination = {
         current_page: page,

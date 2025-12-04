@@ -99,7 +99,7 @@ export class AirportDatabase {
    * Parse destinations JSON string
    */
   private parseDestinations(
-    destinationsStr: string | null,
+    destinationsStr: string | null
   ): Destinations | undefined {
     if (!destinationsStr) return undefined;
     try {
@@ -266,17 +266,18 @@ export class AirportDatabase {
    */
   async getAirportsByCountry(
     country: string,
-    limit = 10000,
+    limit = 9,
+    page = 0
   ): Promise<AirportWithAddress[]> {
     const query = `
       SELECT a.*
       FROM airport a
-      WHERE a.iso_country = ? OR a.country_name = ?
-      LIMIT ?
+      WHERE a.iso_country = ?
+      LIMIT ? OFFSET ?
     `;
     const results = await this.db
       .prepare(query)
-      .bind(country, country, limit)
+      .bind(country, limit, page * limit)
       .all();
 
     return (
@@ -344,29 +345,28 @@ export class AirportDatabase {
    * Get statistics for a specific country
    */
   async getCountryStatsByCode(
-    countryCode: string,
+    countryCode: string
   ): Promise<CountryStats | null> {
-   const query = `
+    const query = `
       SELECT *
       FROM country_stats where country_code=?
     `;
 
-    const results = await this.db
-      .prepare(query)
-      .bind(countryCode)
-      .all();
+    const results = await this.db.prepare(query).bind(countryCode).all();
 
-    return results.results?.map((row: any) => ({
-      country: row.country_code,
-      country_name: row.country_name,
-      airport_count: row.airport_count,
-      large_airport_count: row.large_airport_count || 0,
-      medium_airport_count: row.medium_airport_count || 0,
-      small_airport_count: row.small_airport_count || 0,
-      heliport_count: row.heliport_count || 0,
-      seaplane_base_count: row.seaplane_base_count || 0,
-      other_count: row.other_count || 0,
-    }))[0] || null;
+    return (
+      results.results?.map((row: any) => ({
+        country: row.country_code,
+        country_name: row.country_name,
+        airport_count: row.airport_count,
+        large_airport_count: row.large_airport_count || 0,
+        medium_airport_count: row.medium_airport_count || 0,
+        small_airport_count: row.small_airport_count || 0,
+        heliport_count: row.heliport_count || 0,
+        seaplane_base_count: row.seaplane_base_count || 0,
+        other_count: row.other_count || 0,
+      }))[0] || null
+    );
   }
 
   /**
@@ -381,13 +381,12 @@ export class AirportDatabase {
   }): Promise<Airport[]> {
     const query = `
       SELECT *
-      FROM airport ORDER BY id LIMIT ? OFFSET ?
+      FROM airport 
+      WHERE id > ?
+      LIMIT ?;
     `;
 
-    const results = await this.db
-      .prepare(query)
-      .bind(limit, offset)
-      .all();
+    const results = await this.db.prepare(query).bind(offset, limit).all();
 
     return results.results || [];
   }
@@ -395,7 +394,7 @@ export class AirportDatabase {
   /**
    * Get airports for sitemap generation (sequential pagination without bounds filtering)
    */
-  async getAirportsForSitemap({
+  async getAirportsWithPage({
     limit = 8000,
     offset = 0,
   }: {
@@ -405,11 +404,11 @@ export class AirportDatabase {
     const query = `
       SELECT *
       FROM airport
-      ORDER BY id
-      LIMIT ? OFFSET ?
+      WHERE id > ?
+      LIMIT ?;
     `;
 
-    const results = await this.db.prepare(query).bind(limit, offset).all();
+    const results = await this.db.prepare(query).bind(offset, limit).all();
 
     return results.results || [];
   }

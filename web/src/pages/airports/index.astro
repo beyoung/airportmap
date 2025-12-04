@@ -3,9 +3,9 @@ import Layout from "../../layouts/Layout.astro";
 import { AirportDatabase } from "../../lib/database";
 
 const title =
-    "Search Airports Worldwide - Live Flights & Direct Destinations - AyaMap";
+  "Search Airports Worldwide - Live Flights & Direct Destinations - AyaMap";
 const description =
-    "Search and explore airports worldwide. View real-time flight departures and arrivals, check live flight status, and discover direct flight destinations from any airport. Comprehensive database of global aviation infrastructure.";
+  "Search and explore airports worldwide. View real-time flight departures and arrivals, check live flight status, and discover direct flight destinations from any airport. Comprehensive database of global aviation infrastructure.";
 const canonicalUrl = "https://airport.ayamap.com/airports/";
 
 // Get URL parameters
@@ -18,52 +18,32 @@ const itemsPerPage = 9;
 
 // Get database from Astro locals
 const dbInstance =
-    (Astro.locals as any).runtime?.env?.DB || (Astro.locals as any).DB;
+  (Astro.locals as any).runtime?.env?.DB || (Astro.locals as any).DB;
 
 if (!dbInstance) {
-    throw new Error("Database not available");
+  throw new Error("Database not available");
 }
 
 // Initialize database
 const db = new AirportDatabase(dbInstance);
 
 // Search airports with filters
-const searchResult = await db.searchAirports({
-    query: searchQuery,
-    country: countryFilter,
-    type: typeFilter,
-    page: currentPage,
-    limit: itemsPerPage,
+const searchResult = await db.getAirportsWithPage({
+  limit: itemsPerPage,
+  offset: (currentPage - 1) * itemsPerPage,
 });
 
-const airports = searchResult.airports;
-const totalItems = searchResult.total;
+const airports = searchResult;
+const totalItems = 83247;
 const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-// Get countries for filter dropdown
-const countryStats = await db.getCountryStats();
-const countries = countryStats.map((stat) => ({
-    iso_country: stat.country,
-    country_name: stat.country_name,
-}));
-
 // Get global stats
-const allStats = await db.getCountryStats();
 const stats = {
-    total: allStats.reduce((sum, stat) => sum + stat.airport_count, 0),
-    large: allStats.reduce(
-        (sum, stat) => sum + (stat.large_airport_count || 0),
-        0,
-    ),
-    medium: allStats.reduce(
-        (sum, stat) => sum + (stat.medium_airport_count || 0),
-        0,
-    ),
-    small: allStats.reduce(
-        (sum, stat) => sum + (stat.small_airport_count || 0),
-        0,
-    ),
-    countries: allStats.length,
+  total: 83247,
+  large: 485,
+  medium: 4687,
+  small: 42249,
+  countries: 246,
 };
 
 // Build pagination info
@@ -72,148 +52,124 @@ const showingTo = Math.min(currentPage * itemsPerPage, totalItems);
 
 // Helper function to build URL with parameters
 function buildUrl(params: Record<string, string | number>) {
-    const urlParams = new URLSearchParams();
+  const urlParams = new URLSearchParams();
 
-    if (params.q) urlParams.set("q", params.q.toString());
-    if (params.country) urlParams.set("country", params.country.toString());
-    if (params.type) urlParams.set("type", params.type.toString());
-    if (params.page && params.page !== 1)
-        urlParams.set("page", params.page.toString());
+  if (params.q) urlParams.set("q", params.q.toString());
+  if (params.country) urlParams.set("country", params.country.toString());
+  if (params.type) urlParams.set("type", params.type.toString());
+  if (params.page && params.page !== 1)
+    urlParams.set("page", params.page.toString());
 
-    const queryString = urlParams.toString();
-    return `/airports${queryString ? "?" + queryString : ""}`;
+  const queryString = urlParams.toString();
+  return `/airports${queryString ? "?" + queryString : ""}`;
 }
 ---
 
 <Layout title={title} description={description}>
-    <!-- SEO Meta Tags -->
-    <meta
-        name="keywords"
-        content="airports, live flights, flight departures, flight arrivals, real-time flight status, direct flights, airport search, aviation, global airports, airport database"
-        slot="head"
-    />
-    <link rel="canonical" href={canonicalUrl} slot="head" />
+  <!-- SEO Meta Tags -->
+  <meta
+    name="keywords"
+    content="airports, live flights, flight departures, flight arrivals, real-time flight status, direct flights, airport search, aviation, global airports, airport database"
+    slot="head"
+  />
+  <link rel="canonical" href={canonicalUrl} slot="head" />
 
-    <!-- Open Graph Meta Tags -->
-    <meta property="og:title" content={title} slot="head" />
-    <meta property="og:description" content={description} slot="head" />
-    <meta
-        property="og:url"
-        content="https://airport.ayamap.com/airports/"
-        slot="head"
-    />
-    <meta property="og:type" content="website" slot="head" />
+  <!-- Open Graph Meta Tags -->
+  <meta property="og:title" content={title} slot="head" />
+  <meta property="og:description" content={description} slot="head" />
+  <meta
+    property="og:url"
+    content="https://airport.ayamap.com/airports/"
+    slot="head"
+  />
+  <meta property="og:type" content="website" slot="head" />
 
-    <main class="min-h-screen bg-gray-50">
-        <!-- Hero Section -->
-        <div
-            class="bg-gradient-to-b from-primary-50/50 to-white border-b border-gray-100"
-        >
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-20">
-                <div class="text-center max-w-3xl mx-auto mb-8 lg:mb-12">
-                    <nav
-                        class="flex items-center justify-center space-x-2 text-sm text-gray-500 mb-6"
-                    >
-                        <a
-                            href="/"
-                            class="hover:text-primary-600 transition-colors"
-                            >Home</a
-                        >
-                        <span class="text-gray-300">/</span>
-                        <span class="font-medium text-gray-900">Airports</span>
-                    </nav>
-                    <h1
-                        class="text-3xl md:text-5xl lg:text-6xl font-bold text-gray-900 tracking-tight mb-4 lg:mb-6"
-                    >
-                        Global <span class="text-primary-600">Airports</span> Database
-                    </h1>
-                    <p class="text-lg lg:text-xl text-gray-600 leading-relaxed">
-                        Explore our comprehensive database of airports
-                        worldwide. Find live flights, destinations, and detailed
-                        information.
-                    </p>
-                </div>
-
-                <!-- Stats Grid -->
-                <div
-                    class="grid grid-cols-2 md:grid-cols-5 gap-3 lg:gap-6 max-w-5xl mx-auto"
-                >
-                    <div
-                        class="bg-white p-4 lg:p-6 rounded-2xl shadow-sm border border-gray-100 text-center hover:shadow-md transition-shadow"
-                    >
-                        <div
-                            class="text-2xl lg:text-3xl font-bold text-primary-600 mb-1"
-                        >
-                            {stats.total.toLocaleString()}
-                        </div>
-                        <div
-                            class="text-xs lg:text-sm font-medium text-gray-500"
-                        >
-                            Total Airports
-                        </div>
-                    </div>
-                    <div
-                        class="bg-white p-4 lg:p-6 rounded-2xl shadow-sm border border-gray-100 text-center hover:shadow-md transition-shadow"
-                    >
-                        <div
-                            class="text-2xl lg:text-3xl font-bold text-green-600 mb-1"
-                        >
-                            {stats.large.toLocaleString()}
-                        </div>
-                        <div
-                            class="text-xs lg:text-sm font-medium text-gray-500"
-                        >
-                            Large Airports
-                        </div>
-                    </div>
-                    <div
-                        class="bg-white p-4 lg:p-6 rounded-2xl shadow-sm border border-gray-100 text-center hover:shadow-md transition-shadow"
-                    >
-                        <div
-                            class="text-2xl lg:text-3xl font-bold text-yellow-600 mb-1"
-                        >
-                            {stats.medium.toLocaleString()}
-                        </div>
-                        <div
-                            class="text-xs lg:text-sm font-medium text-gray-500"
-                        >
-                            Medium Airports
-                        </div>
-                    </div>
-                    <div
-                        class="bg-white p-4 lg:p-6 rounded-2xl shadow-sm border border-gray-100 text-center hover:shadow-md transition-shadow"
-                    >
-                        <div
-                            class="text-2xl lg:text-3xl font-bold text-purple-600 mb-1"
-                        >
-                            {stats.small.toLocaleString()}
-                        </div>
-                        <div
-                            class="text-xs lg:text-sm font-medium text-gray-500"
-                        >
-                            Small Airports
-                        </div>
-                    </div>
-                    <div
-                        class="bg-white p-4 lg:p-6 rounded-2xl shadow-sm border border-gray-100 text-center hover:shadow-md transition-shadow col-span-2 md:col-span-1"
-                    >
-                        <div
-                            class="text-2xl lg:text-3xl font-bold text-gray-700 mb-1"
-                        >
-                            {stats.countries.toLocaleString()}
-                        </div>
-                        <div
-                            class="text-xs lg:text-sm font-medium text-gray-500"
-                        >
-                            Countries
-                        </div>
-                    </div>
-                </div>
-            </div>
+  <main class="min-h-screen bg-gray-50">
+    <!-- Hero Section -->
+    <div
+      class="bg-gradient-to-b from-primary-50/50 to-white border-b border-gray-100"
+    >
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-20">
+        <div class="text-center max-w-3xl mx-auto mb-8 lg:mb-12">
+          <nav
+            class="flex items-center justify-center space-x-2 text-sm text-gray-500 mb-6"
+          >
+            <a href="/" class="hover:text-primary-600 transition-colors">Home</a
+            >
+            <span class="text-gray-300">/</span>
+            <span class="font-medium text-gray-900">Airports</span>
+          </nav>
+          <h1
+            class="text-3xl md:text-5xl lg:text-6xl font-bold text-gray-900 tracking-tight mb-4 lg:mb-6"
+          >
+            Global <span class="text-primary-600">Airports</span> Database
+          </h1>
+          <p class="text-lg lg:text-xl text-gray-600 leading-relaxed">
+            Explore our comprehensive database of airports worldwide. Find live
+            flights, destinations, and detailed information.
+          </p>
         </div>
 
-        <!-- Search and Filter Section -->
-        <!-- <div
+        <!-- Stats Grid -->
+        <div
+          class="grid grid-cols-2 md:grid-cols-5 gap-3 lg:gap-6 max-w-5xl mx-auto"
+        >
+          <div
+            class="bg-white p-4 lg:p-6 rounded-2xl shadow-sm border border-gray-100 text-center hover:shadow-md transition-shadow"
+          >
+            <div class="text-2xl lg:text-3xl font-bold text-primary-600 mb-1">
+              {stats.total.toLocaleString()}
+            </div>
+            <div class="text-xs lg:text-sm font-medium text-gray-500">
+              Total Airports
+            </div>
+          </div>
+          <div
+            class="bg-white p-4 lg:p-6 rounded-2xl shadow-sm border border-gray-100 text-center hover:shadow-md transition-shadow"
+          >
+            <div class="text-2xl lg:text-3xl font-bold text-green-600 mb-1">
+              {stats.large.toLocaleString()}
+            </div>
+            <div class="text-xs lg:text-sm font-medium text-gray-500">
+              Large Airports
+            </div>
+          </div>
+          <div
+            class="bg-white p-4 lg:p-6 rounded-2xl shadow-sm border border-gray-100 text-center hover:shadow-md transition-shadow"
+          >
+            <div class="text-2xl lg:text-3xl font-bold text-yellow-600 mb-1">
+              {stats.medium.toLocaleString()}
+            </div>
+            <div class="text-xs lg:text-sm font-medium text-gray-500">
+              Medium Airports
+            </div>
+          </div>
+          <div
+            class="bg-white p-4 lg:p-6 rounded-2xl shadow-sm border border-gray-100 text-center hover:shadow-md transition-shadow"
+          >
+            <div class="text-2xl lg:text-3xl font-bold text-purple-600 mb-1">
+              {stats.small.toLocaleString()}
+            </div>
+            <div class="text-xs lg:text-sm font-medium text-gray-500">
+              Small Airports
+            </div>
+          </div>
+          <div
+            class="bg-white p-4 lg:p-6 rounded-2xl shadow-sm border border-gray-100 text-center hover:shadow-md transition-shadow col-span-2 md:col-span-1"
+          >
+            <div class="text-2xl lg:text-3xl font-bold text-gray-700 mb-1">
+              {stats.countries.toLocaleString()}
+            </div>
+            <div class="text-xs lg:text-sm font-medium text-gray-500">
+              Countries
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search and Filter Section -->
+    <!-- <div
             class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm"
         >
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -309,280 +265,261 @@ function buildUrl(params: Record<string, string | number>) {
             </div>
         </div> -->
 
-        <!-- Results Section -->
-        <section class="py-8 lg:py-12">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex items-center justify-between mb-6 lg:mb-8">
-                    <h2 class="text-xl lg:text-2xl font-bold text-gray-900">
-                        Search Results
-                    </h2>
-                    <span
-                        class="px-3 py-1 lg:px-4 lg:py-1.5 bg-white border border-gray-200 rounded-full text-xs lg:text-sm font-medium text-gray-600 shadow-sm"
+    <!-- Results Section -->
+    <section class="py-8 lg:py-12">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between mb-6 lg:mb-8">
+          <h2 class="text-xl lg:text-2xl font-bold text-gray-900">
+            Search Results
+          </h2>
+          <span
+            class="px-3 py-1 lg:px-4 lg:py-1.5 bg-white border border-gray-200 rounded-full text-xs lg:text-sm font-medium text-gray-600 shadow-sm"
+          >
+            {totalItems.toLocaleString()} airports found
+          </span>
+        </div>
+
+        <!-- Airports Grid -->
+        <div
+          class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-12"
+        >
+          {
+            airports.map((airport) => (
+              <article class="relative group bg-white rounded-2xl shadow-sm border border-gray-200 p-4 lg:p-6 hover:shadow-xl hover:border-primary-100 transition-all duration-300 flex flex-col h-full">
+                <div class="flex justify-between items-start mb-4">
+                  <div>
+                    <div class="flex items-center gap-2 mb-1">
+                      <h3
+                        class="text-lg font-bold text-gray-900 group-hover:text-primary-600 transition-colors line-clamp-1"
+                        title={airport.name}
+                      >
+                        {airport.name}
+                      </h3>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm">
+                      <span class="font-mono font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                        {airport.ident}
+                      </span>
+                      {airport.iata_code && (
+                        <span class="font-mono font-medium text-primary-700 bg-primary-50 px-2 py-0.5 rounded">
+                          {airport.iata_code}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <span
+                    class={`px-2.5 py-1 text-xs font-medium rounded-full whitespace-nowrap capitalize ${
+                      airport.type === "large_airport"
+                        ? "bg-green-100 text-green-800"
+                        : airport.type === "medium_airport"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : airport.type === "small_airport"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-gray-100 text-gray-800"
+                    }`}
+                  >
+                    {(airport.type || "unknown").replace("_", " ")}
+                  </span>
+                </div>
+
+                <div class="space-y-3 mb-6 flex-grow">
+                  <div class="flex items-start gap-2 text-sm text-gray-600">
+                    <svg
+                      class="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
-                        {totalItems.toLocaleString()} airports found
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                      />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                    <span>
+                      {airport.municipality ||
+                        airport.address?.municipality ||
+                        "Unknown City"}
+                      ,
+                      <span class="font-medium text-gray-900">
+                        {" "}
+                        {airport.address?.country_name ||
+                          airport.iso_country ||
+                          "Unknown Country"}
+                      </span>
                     </span>
+                  </div>
+                  <div class="flex items-center gap-2 text-sm text-gray-600">
+                    <svg
+                      class="w-5 h-5 text-gray-400 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 7m0 13V7"
+                      />
+                    </svg>
+                    <span>
+                      {airport.latitude_deg?.toFixed(4) || "N/A"},{" "}
+                      {airport.longitude_deg?.toFixed(4) || "N/A"}
+                    </span>
+                  </div>
+                  {airport.elevation_ft && (
+                    <div class="flex items-center gap-2 text-sm text-gray-600">
+                      <svg
+                        class="w-5 h-5 text-gray-400 flex-shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                        />
+                      </svg>
+                      <span>Elevation: {airport.elevation_ft} ft</span>
+                    </div>
+                  )}
                 </div>
 
-                <!-- Airports Grid -->
-                <div
-                    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-12"
-                >
-                    {
-                        airports.map((airport) => (
-                            <article class="relative group bg-white rounded-2xl shadow-sm border border-gray-200 p-4 lg:p-6 hover:shadow-xl hover:border-primary-100 transition-all duration-300 flex flex-col h-full">
-                                <div class="flex justify-between items-start mb-4">
-                                    <div>
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <h3
-                                                class="text-lg font-bold text-gray-900 group-hover:text-primary-600 transition-colors line-clamp-1"
-                                                title={airport.name}
-                                            >
-                                                {airport.name}
-                                            </h3>
-                                        </div>
-                                        <div class="flex items-center gap-2 text-sm">
-                                            <span class="font-mono font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                                                {airport.ident}
-                                            </span>
-                                            {airport.iata_code && (
-                                                <span class="font-mono font-medium text-primary-700 bg-primary-50 px-2 py-0.5 rounded">
-                                                    {airport.iata_code}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <span
-                                        class={`px-2.5 py-1 text-xs font-medium rounded-full whitespace-nowrap capitalize ${
-                                            airport.type === "large_airport"
-                                                ? "bg-green-100 text-green-800"
-                                                : airport.type ===
-                                                    "medium_airport"
-                                                  ? "bg-yellow-100 text-yellow-800"
-                                                  : airport.type ===
-                                                      "small_airport"
-                                                    ? "bg-blue-100 text-blue-800"
-                                                    : "bg-gray-100 text-gray-800"
-                                        }`}
-                                    >
-                                        {(airport.type || "unknown").replace(
-                                            "_",
-                                            " ",
-                                        )}
-                                    </span>
-                                </div>
-
-                                <div class="space-y-3 mb-6 flex-grow">
-                                    <div class="flex items-start gap-2 text-sm text-gray-600">
-                                        <svg
-                                            class="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                                            />
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                                            />
-                                        </svg>
-                                        <span>
-                                            {airport.municipality ||
-                                                airport.address?.municipality ||
-                                                "Unknown City"}
-                                            ,
-                                            <span class="font-medium text-gray-900">
-                                                {" "}
-                                                {airport.address
-                                                    ?.country_name ||
-                                                    airport.iso_country ||
-                                                    "Unknown Country"}
-                                            </span>
-                                        </span>
-                                    </div>
-                                    <div class="flex items-center gap-2 text-sm text-gray-600">
-                                        <svg
-                                            class="w-5 h-5 text-gray-400 flex-shrink-0"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 7m0 13V7"
-                                            />
-                                        </svg>
-                                        <span>
-                                            {airport.latitude_deg?.toFixed(4) ||
-                                                "N/A"}
-                                            ,{" "}
-                                            {airport.longitude_deg?.toFixed(
-                                                4,
-                                            ) || "N/A"}
-                                        </span>
-                                    </div>
-                                    {airport.elevation_ft && (
-                                        <div class="flex items-center gap-2 text-sm text-gray-600">
-                                            <svg
-                                                class="w-5 h-5 text-gray-400 flex-shrink-0"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    stroke-width="2"
-                                                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-                                                />
-                                            </svg>
-                                            <span>
-                                                Elevation:{" "}
-                                                {airport.elevation_ft} ft
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div class="flex gap-3 mt-auto pt-4 border-t border-gray-100">
-                                    <a
-                                        href={`/airports/${airport.ident}`}
-                                        class="flex-1 inline-flex justify-center items-center px-4 py-2 bg-primary-50 text-primary-700 text-sm font-medium rounded-xl hover:bg-primary-100 transition-colors group-hover:bg-primary-600 group-hover:text-white after:absolute after:inset-0"
-                                    >
-                                        View Details
-                                    </a>
-                                    <a
-                                        href={`/?lat=${airport.latitude_deg}&lng=${airport.longitude_deg}&zoom=12`}
-                                        class="relative z-10 inline-flex justify-center items-center px-3 py-2 bg-gray-50 text-gray-600 rounded-xl hover:bg-gray-100 transition-colors"
-                                        title="View on Map"
-                                    >
-                                        <svg
-                                            class="w-5 h-5"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 7m0 13V7"
-                                            />
-                                        </svg>
-                                    </a>
-                                </div>
-                            </article>
-                        ))
-                    }
+                <div class="flex gap-3 mt-auto pt-4 border-t border-gray-100">
+                  <a
+                    href={`/airports/${airport.ident}`}
+                    class="flex-1 inline-flex justify-center items-center px-4 py-2 bg-primary-50 text-primary-700 text-sm font-medium rounded-xl hover:bg-primary-100 transition-colors group-hover:bg-primary-600 group-hover:text-white after:absolute after:inset-0"
+                  >
+                    View Details
+                  </a>
+                  <a
+                    href={`/?lat=${airport.latitude_deg}&lng=${airport.longitude_deg}&zoom=12`}
+                    class="relative z-10 inline-flex justify-center items-center px-3 py-2 bg-gray-50 text-gray-600 rounded-xl hover:bg-gray-100 transition-colors"
+                    title="View on Map"
+                  >
+                    <svg
+                      class="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 7m0 13V7"
+                      />
+                    </svg>
+                  </a>
                 </div>
+              </article>
+            ))
+          }
+        </div>
 
-                <!-- Pagination -->
-                {
-                    totalPages > 1 && (
-                        <div class="flex items-center justify-between border-t border-gray-200 pt-8">
-                            <div class="text-sm text-gray-500">
-                                Showing{" "}
-                                <span class="font-medium text-gray-900">
-                                    {showingFrom}
-                                </span>{" "}
-                                to{" "}
-                                <span class="font-medium text-gray-900">
-                                    {showingTo}
-                                </span>{" "}
-                                of{" "}
-                                <span class="font-medium text-gray-900">
-                                    {totalItems.toLocaleString()}
-                                </span>{" "}
-                                results
-                            </div>
-                            <div class="flex gap-2">
-                                {currentPage > 1 && (
-                                    <a
-                                        href={buildUrl({
-                                            q: searchQuery,
-                                            country: countryFilter,
-                                            type: typeFilter,
-                                            page: currentPage - 1,
-                                        })}
-                                        class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-                                    >
-                                        <svg
-                                            class="mr-2 h-4 w-4"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M15 19l-7-7 7-7"
-                                            />
-                                        </svg>
-                                        Previous
-                                    </a>
-                                )}
-                                {currentPage < totalPages && (
-                                    <a
-                                        href={buildUrl({
-                                            q: searchQuery,
-                                            country: countryFilter,
-                                            type: typeFilter,
-                                            page: currentPage + 1,
-                                        })}
-                                        class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-                                    >
-                                        Next
-                                        <svg
-                                            class="ml-2 h-4 w-4"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M9 5l7 7-7 7"
-                                            />
-                                        </svg>
-                                    </a>
-                                )}
-                            </div>
-                        </div>
-                    )
-                }
+        <!-- Pagination -->
+        {
+          totalPages > 1 && (
+            <div class="flex items-center justify-between border-t border-gray-200 pt-8">
+              <div class="text-sm text-gray-500">
+                Showing{" "}
+                <span class="font-medium text-gray-900">{showingFrom}</span> to{" "}
+                <span class="font-medium text-gray-900">{showingTo}</span> of{" "}
+                <span class="font-medium text-gray-900">
+                  {totalItems.toLocaleString()}
+                </span>{" "}
+                results
+              </div>
+              <div class="flex gap-2">
+                {currentPage > 1 && (
+                  <a
+                    href={buildUrl({
+                      q: searchQuery,
+                      country: countryFilter,
+                      type: typeFilter,
+                      page: currentPage - 1,
+                    })}
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                  >
+                    <svg
+                      class="mr-2 h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M15 19l-7-7 7-7"
+                      />
+                    </svg>
+                    Previous
+                  </a>
+                )}
+                {currentPage < totalPages && (
+                  <a
+                    href={buildUrl({
+                      q: searchQuery,
+                      country: countryFilter,
+                      type: typeFilter,
+                      page: currentPage + 1,
+                    })}
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                  >
+                    Next
+                    <svg
+                      class="ml-2 h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </a>
+                )}
+              </div>
             </div>
-        </section>
-    </main>
+          )
+        }
+      </div>
+    </section>
+  </main>
 </Layout>
 
 <style>
-    /* Smooth scrolling */
-    html {
-        scroll-behavior: smooth;
-    }
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
 
-    /* Custom scrollbar for webkit */
-    ::-webkit-scrollbar {
-        width: 8px;
-    }
-    ::-webkit-scrollbar-track {
-        background: #f1f1f1;
-    }
-    ::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
-    }
+  /* Custom scrollbar for webkit */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
 </style>

@@ -21,10 +21,6 @@ if (!db) {
 const airportDb = new AirportDatabase(db);
 const key = decodeURIComponent(ident as string);
 let airportData = await airportDb.getAirportByCode(key);
-if (!airportData) {
-  const search = await airportDb.searchAirports({ query: key, limit: 1 });
-  airportData = search.airports[0];
-}
 
 if (!airportData) {
   return Astro.redirect('/');
@@ -425,7 +421,14 @@ function getTypeBadge(type: string | null) {
 								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 7m0 13V7" />
 								</svg>
-								Open in Google Maps
+								Google Maps
+							</a>
+							<a id="google-street-view-link" href={`https://www.google.com/maps?q=&layer=c&cbll=${airportData.latitude_deg},${airportData.longitude_deg}`} target="_blank" rel="noopener noreferrer" class="w-full flex items-center justify-center gap-2 bg-amber-50 text-amber-700 px-4 py-3 rounded-xl hover:bg-amber-100 transition-colors text-sm font-medium">
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+								</svg>
+								Google Street View
 							</a>
 							{airportData.home_link && (
 								<a href={airportData.home_link} target="_blank" rel="noopener noreferrer" class="w-full flex items-center justify-center gap-2 bg-purple-50 text-purple-700 px-4 py-3 rounded-xl hover:bg-purple-100 transition-colors text-sm font-medium">
