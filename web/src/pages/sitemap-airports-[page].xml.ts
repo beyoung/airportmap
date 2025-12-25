@@ -22,14 +22,9 @@ export const getStaticPaths: GetStaticPaths = async () => {
   return paths;
 };
 
-export const GET: APIRoute = async ({ locals, params }) => {
+export const GET: APIRoute = async ({ params }) => {
   try {
-    const db = (locals as any).runtime?.env?.DB;
-    if (!db) {
-      return new Response("Database not available", { status: 500 });
-    }
-
-    const airportDb = new AirportDatabase(db);
+    const airportDb = new AirportDatabase();
     const page = parseInt(params.page as string) || 1;
     const AIRPORTS_PER_PAGE = 2500;
     const offset = (page - 1) * AIRPORTS_PER_PAGE;

@@ -14,7 +14,7 @@ import type { APIRoute } from 'astro';
 import { AirportDatabase } from '../../../../lib/database';
 
 
-export const GET: APIRoute = async ({ params, request, locals }) => {
+export const GET: APIRoute = async ({ params, request }) => {
   try {
     const { country } = params;
     
@@ -28,19 +28,6 @@ export const GET: APIRoute = async ({ params, request, locals }) => {
       );
     }
 
-    // Get database from Astro locals
-    const db = (locals as any).runtime?.env?.DB || (locals as any).DB;
-    
-    if (!db) {
-      return new Response(
-        JSON.stringify({ error: 'Database not available' }),
-        { 
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
     const url = new URL(request.url);
     const searchParams = url.searchParams;
     
@@ -49,8 +36,7 @@ export const GET: APIRoute = async ({ params, request, locals }) => {
     const limit = Math.min(200, Math.max(1, parseInt(searchParams.get('limit') || '50')));
     const type = searchParams.get('type') || '';
     
-    // Create database instance and get airports
-    const airportDb = new AirportDatabase(db);
+    const airportDb = new AirportDatabase();
     const airports = await airportDb.getAirportsByCountry((country as string).toUpperCase());
     
     // Filter by type if specified

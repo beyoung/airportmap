@@ -130,6 +130,7 @@
 
   // Display search results
     function displayResults(airports: any[], total: number) {
+      resultsLoading.classList.add('hidden');
       resultsCount.textContent = `${total} result${total !== 1 ? 's' : ''}`;
       
       if (airports.length === 0) {
@@ -156,6 +157,7 @@
     
     // Display error message
     function displayError(message: string) {
+      resultsLoading.classList.add('hidden');
       resultsCount.textContent = 'Error';
       resultsList.innerHTML = `<div class="error-message">${message}</div>`;
     }
@@ -165,6 +167,7 @@
       searchResults.classList.add('hidden');
       currentQuery = '';
       resultsList.innerHTML = '';
+      resultsLoading.classList.add('hidden');
     }
   
     // Event listeners for input

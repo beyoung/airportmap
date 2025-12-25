@@ -7,24 +7,24 @@
     "build": "astro build",
     "astro": "astro",
     "preview": "astro build && wrangler pages dev ./dist --port 8787",
-    "deploy": "pnpm build && wrangler pages deploy dist --project-name=airports-ayamap",
-    "generate:update-sql": "node ./src/scripts/update-destinations.mjs",
-    "apply:update-sql": "wrangler d1 execute airports-db --remote --file=./update-destinations.sql",
-    "apply:update-sql:parts": "bash -lc 'for f in ./update-destinations.part-*.sql; do echo \"Applying $f\"; wrangler d1 execute airports-db --remote --file=$f || exit 1; done'"
+    "deploy": "pnpm build && wrangler pages deploy dist --project-name=airports-ayamap"
   },
   "dependencies": {
+    "@astrojs/check": "^0.9.6",
     "@astrojs/cloudflare": "^12.6.8",
     "@astrojs/mdx": "^4.3.6",
     "@astrojs/node": "^9.4.3",
     "@astrojs/rss": "^4.0.12",
     "@astrojs/tailwind": "^6.0.2",
+    "@supabase/supabase-js": "^2.49.1",
     "@tailwindcss/typography": "^0.5.16",
     "@types/prismjs": "^1.26.5",
     "astro": "^5.13.7",
     "better-sqlite3": "^12.2.0",
     "maplibre-gl": "^5.7.1",
     "prismjs": "^1.30.0",
-    "tailwindcss": "^3.4.17"
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.9.3"
   },
   "packageManager": "pnpm@10.16.1+sha512.0e155aa2629db8672b49e8475da6226aa4bdea85fdcdfdc15350874946d4f3c91faaf64cbdc4a5d1ab8002f473d5c3fcedcd197989cf0390f9badd3c04678706"
 }

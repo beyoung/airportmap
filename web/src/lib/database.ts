@@ -1,18 +1,4 @@
-/**
- * Database utility functions for Cloudflare D1
- * Provides typed interfaces for airport data queries
- */
-
-// Cloudflare D1 types
-interface D1Database {
-  prepare(query: string): D1PreparedStatement;
-}
-
-interface D1PreparedStatement {
-  bind(...values: any[]): D1PreparedStatement;
-  first(): Promise<any>;
-  all(): Promise<{ results: any[] }>;
-}
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export interface DestinationAirport {
   name: string;
@@ -89,11 +75,27 @@ export interface CountryStats {
   other_count?: number;
 }
 
-/**
- * Database class for handling D1 operations
- */
 export class AirportDatabase {
-  constructor(private db: D1Database) {}
+  private client: SupabaseClient;
+
+  constructor(client?: SupabaseClient) {
+    if (client) {
+      this.client = client;
+    } else {
+      const url =
+        import.meta.env.SUPA_URL || import.meta.env.PUBLIC_SUPABASE_URL;
+      const key =
+        import.meta.env.SUPA_KEY || import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+      if (!url || !key) {
+        throw new Error("Supabase configuration missing");
+      }
+      this.client = createClient(url, key, {
+        auth: {
+          persistSession: false,
+        },
+      });
+    }
+  }
 
   /**
    * Parse destinations JSON string
@@ -126,68 +128,49 @@ export class AirportDatabase {
     page?: number;
     limit?: number;
   } = {}): Promise<SearchResult> {
-    const offset = (page - 1) * limit;
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
 
-    let whereConditions: string[] = [];
-    let params: any[] = [];
+    let queryBuilder = this.client
+      .from("airport")
+      .select("*", { count: "exact" });
 
-    // Build WHERE conditions
     if (query) {
-      whereConditions.push(`(
-        a.iata_code = ? OR
-        a.icao_code = ? OR
-        a.name = ? OR
-        a.municipality = ? OR
-        a.country_name = ?
-      )`);
-      const searchTerm = `%${query}%`;
-      params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+      const search = `%${query}%`;
+      queryBuilder = queryBuilder.or(
+        [
+          `iata_code.ilike.${search}`,
+          `icao_code.ilike.${search}`,
+          `name.ilike.${search}`,
+          `municipality.ilike.${search}`,
+          `country_name.ilike.${search}`,
+        ].join(","),
+      );
     }
 
     if (country) {
-      whereConditions.push("(a.iso_country = ? OR a.country_name = ?)");
-      params.push(country, country);
+      const countryUpper = country.toUpperCase();
+      queryBuilder = queryBuilder.or(
+        [
+          `iso_country.eq.${countryUpper}`,
+          `country_name.ilike.%${country}%`,
+        ].join(","),
+      );
     }
 
     if (type) {
-      whereConditions.push("a.type = ?");
-      params.push(type);
+      queryBuilder = queryBuilder.eq("type", type);
     }
 
-    const whereClause =
-      whereConditions.length > 0
-        ? `WHERE ${whereConditions.join(" AND ")}`
-        : "";
-
-    // Get total count
-    const countQuery = `
-      SELECT COUNT(*) as total
-      FROM airport a
-      ${whereClause}
-    `;
-
-    const countResult = await this.db
-      .prepare(countQuery)
-      .bind(...params)
-      .first();
-    const total = countResult?.total || 0;
-
-    // Get airports with pagination
-    const dataQuery = `
-      SELECT
-        a.*
-      FROM airport a
-      ${whereClause}
-      LIMIT ? OFFSET ?
-    `;
-
-    const results = await this.db
-      .prepare(dataQuery)
-      .bind(...params, limit, offset)
-      .all();
+    const { data, error, count } = await queryBuilder
+      .order("type_order", { ascending: true })
+      .range(from, to);
+    if (error) {
+      throw error;
+    }
 
     const airports: AirportWithAddress[] =
-      results.results?.map((row: any) => ({
+      data?.map((row: any) => ({
         id: row.id,
         ident: row.ident,
         type: row.type,
@@ -212,7 +195,7 @@ export class AirportDatabase {
 
     return {
       airports,
-      total: Number(total),
+      total: Number(count || 0),
       page,
       limit,
     };
@@ -222,42 +205,47 @@ export class AirportDatabase {
    * Get airport by IATA/ICAO code
    */
   async getAirportByCode(code: string): Promise<AirportWithAddress | null> {
-    const query = `
-      SELECT a.*
-      FROM airport a
-      WHERE a.ident = ? OR a.iata_code = ? OR a.icao_code = ?
-    `;
-
     const upperCode = code.toUpperCase();
-    const result = await this.db
-      .prepare(query)
-      .bind(upperCode, upperCode, upperCode)
-      .first();
+    const { data, error } = await this.client
+      .from("airport")
+      .select("*")
+      .or(
+        [
+          `ident.eq.${upperCode}`,
+          `iata_code.eq.${upperCode}`,
+          `icao_code.eq.${upperCode}`,
+        ].join(","),
+      )
+      .maybeSingle();
 
-    if (!result) return null;
+    if (error) {
+      throw error;
+    }
+
+    if (!data) return null;
 
     return {
-      id: result.id,
-      ident: result.ident,
-      type: result.type,
-      name: result.name,
-      latitude_deg: result.latitude_deg,
-      longitude_deg: result.longitude_deg,
-      elevation_ft: result.elevation_ft,
-      iso_country: result.iso_country,
-      iso_region: result.iso_region,
-      icao_code: result.icao_code,
-      iata_code: result.iata_code,
-      municipality: result.municipality,
-      home_link: result.home_link,
-      wikipedia_link: result.wikipedia_link,
-      keywords: result.keywords,
-      destinations: result.destinations,
-      address_id: result.address_id,
-      country_name: result.country_name,
-      region_name: result.region_name,
+      id: data.id,
+      ident: data.ident,
+      type: data.type,
+      name: data.name,
+      latitude_deg: data.latitude_deg,
+      longitude_deg: data.longitude_deg,
+      elevation_ft: data.elevation_ft,
+      iso_country: data.iso_country,
+      iso_region: data.iso_region,
+      icao_code: data.icao_code,
+      iata_code: data.iata_code,
+      municipality: data.municipality,
+      home_link: data.home_link,
+      wikipedia_link: data.wikipedia_link,
+      keywords: data.keywords,
+      destinations: data.destinations,
+      address_id: data.address_id,
+      country_name: data.country_name,
+      region_name: data.region_name,
       address: undefined,
-      destinationsData: this.parseDestinations(result.destinations),
+      destinationsData: this.parseDestinations(data.destinations),
     };
   }
 
@@ -269,19 +257,21 @@ export class AirportDatabase {
     limit = 9,
     page = 0
   ): Promise<AirportWithAddress[]> {
-    const query = `
-      SELECT a.*
-      FROM airport a
-      WHERE a.iso_country = ?
-      LIMIT ? OFFSET ?
-    `;
-    const results = await this.db
-      .prepare(query)
-      .bind(country, limit, page * limit)
-      .all();
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+    const { data, error } = await this.client
+      .from("airport")
+      .select("*")
+      .eq("iso_country", country.toUpperCase())
+      .order("type_order", { ascending: true })
+      .range(from, to);
+
+    if (error) {
+      throw error;
+    }
 
     return (
-      results.results?.map((row: any) => ({
+      data?.map((row: any) => ({
         id: row.id,
         ident: row.ident,
         type: row.type,
@@ -310,25 +300,20 @@ export class AirportDatabase {
    * Get country statistics
    */
   async getCountryStats(): Promise<CountryStats[]> {
-    const query = `
-      SELECT
-        country_code as country,
-        country_name,
-        airport_count,
-        large_airport_count,
-        medium_airport_count,
-        small_airport_count,
-        heliport_count,
-        seaplane_base_count,
-        other_count
-      FROM country_stats
-      ORDER BY airport_count DESC
-    `;
+    const { data, error } = await this.client
+      .from("country_stats")
+      .select(
+        "country_code,country_name,airport_count,large_airport_count,medium_airport_count,small_airport_count,heliport_count,seaplane_base_count,other_count",
+      )
+      .order("airport_count", { ascending: false });
 
-    const results = await this.db.prepare(query).all();
+    if (error) {
+      throw error;
+    }
+
     return (
-      results.results?.map((row: any) => ({
-        country: row.country,
+      data?.map((row: any) => ({
+        country: row.country_code,
         country_name: row.country_name,
         airport_count: row.airport_count,
         large_airport_count: row.large_airport_count || 0,
@@ -347,26 +332,31 @@ export class AirportDatabase {
   async getCountryStatsByCode(
     countryCode: string
   ): Promise<CountryStats | null> {
-    const query = `
-      SELECT *
-      FROM country_stats where country_code=?
-    `;
+    const { data, error } = await this.client
+      .from("country_stats")
+      .select(
+        "country_code,country_name,airport_count,large_airport_count,medium_airport_count,small_airport_count,heliport_count,seaplane_base_count,other_count",
+      )
+      .eq("country_code", countryCode.toUpperCase())
+      .maybeSingle();
 
-    const results = await this.db.prepare(query).bind(countryCode).all();
+    if (error) {
+      throw error;
+    }
 
-    return (
-      results.results?.map((row: any) => ({
-        country: row.country_code,
-        country_name: row.country_name,
-        airport_count: row.airport_count,
-        large_airport_count: row.large_airport_count || 0,
-        medium_airport_count: row.medium_airport_count || 0,
-        small_airport_count: row.small_airport_count || 0,
-        heliport_count: row.heliport_count || 0,
-        seaplane_base_count: row.seaplane_base_count || 0,
-        other_count: row.other_count || 0,
-      }))[0] || null
-    );
+    if (!data) return null;
+
+    return {
+      country: data.country_code,
+      country_name: data.country_name,
+      airport_count: data.airport_count,
+      large_airport_count: data.large_airport_count || 0,
+      medium_airport_count: data.medium_airport_count || 0,
+      small_airport_count: data.small_airport_count || 0,
+      heliport_count: data.heliport_count || 0,
+      seaplane_base_count: data.seaplane_base_count || 0,
+      other_count: data.other_count || 0,
+    };
   }
 
   /**
@@ -379,16 +369,18 @@ export class AirportDatabase {
     limit?: number;
     offset?: number;
   }): Promise<Airport[]> {
-    const query = `
-      SELECT *
-      FROM airport 
-      WHERE id > ?
-      LIMIT ?;
-    `;
+    const from = offset;
+    const to = offset + limit - 1;
+    const { data, error } = await this.client
+      .from("airport")
+      .select("*")
+      .range(from, to);
 
-    const results = await this.db.prepare(query).bind(offset, limit).all();
+    if (error) {
+      throw error;
+    }
 
-    return results.results || [];
+    return (data as Airport[]) || [];
   }
 
   /**
@@ -401,15 +393,17 @@ export class AirportDatabase {
     limit?: number;
     offset?: number;
   }): Promise<Airport[]> {
-    const query = `
-      SELECT *
-      FROM airport
-      WHERE id > ?
-      LIMIT ?;
-    `;
+    const from = offset;
+    const to = offset + limit - 1;
+    const { data, error } = await this.client
+      .from("airport")
+      .select("*")
+      .range(from, to);
 
-    const results = await this.db.prepare(query).bind(offset, limit).all();
+    if (error) {
+      throw error;
+    }
 
-    return results.results || [];
+    return (data as Airport[]) || [];
   }
 }

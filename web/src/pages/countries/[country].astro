@@ -14,19 +14,10 @@ const url = Astro.url;
 const page = parseInt(url.searchParams.get("page") || "1");
 const query = url.searchParams.get("q") || "";
 const type = url.searchParams.get("type") || "";
-const sort = url.searchParams.get("sort") || "name";
+const sort = url.searchParams.get("sort") || "type";
 const limit = 9;
 
-// Get database from Astro locals
-const dbInstance =
-    (Astro.locals as any).runtime?.env?.DB || (Astro.locals as any).DB;
-
-if (!dbInstance) {
-    throw new Error("Database not available");
-}
-
-// Create database instance
-const db = new AirportDatabase(dbInstance);
+const db = new AirportDatabase();
 
 // Get country stats and airports data
 let countryStats: any = null;
@@ -38,17 +29,55 @@ try {
     // Get country statistics
     countryStats = await db.getCountryStatsByCode(country.toUpperCase());
 
-    // Get all airports for the country
-    const allAirports = await db.getAirportsByCountry(country.toUpperCase(), limit, page);
+    const allAirports = await db.getAirportsByCountry(
+        country.toUpperCase(),
+        limit,
+        page,
+    );
 
-   
-
-    // Apply pagination
-    // const total = filteredAirports.length;
     const total = countryStats?.airport_count || 0;
     const totalPages = Math.ceil(total / limit) || 1;
-
-    airports = allAirports;
+    function getTypePriority(typeValue: string | null | undefined): number {
+        switch (typeValue) {
+            case "large_airport":
+                return 0;
+            case "medium_airport":
+                return 1;
+            case "small_airport":
+                return 2;
+            case "heliport":
+                return 3;
+            case "seaplane_base":
+                return 4;
+            default:
+                return 5;
+        }
+    }
+    function sortAirports(a: any, b: any): number {
+        if (sort === "municipality") {
+            const cityA = a.municipality || "";
+            const cityB = b.municipality || "";
+            if (cityA && cityB && cityA !== cityB) {
+                return cityA.localeCompare(cityB);
+            }
+        }
+        if (sort === "name") {
+            const nameA = (a.name || a.ident || "").toString();
+            const nameB = (b.name || b.ident || "").toString();
+            if (nameA && nameB && nameA !== nameB) {
+                return nameA.localeCompare(nameB);
+            }
+        }
+        const priorityA = getTypePriority(a.type);
+        const priorityB = getTypePriority(b.type);
+        if (priorityA !== priorityB) {
+            return priorityA - priorityB;
+        }
+        const fallbackNameA = (a.name || a.ident || "").toString();
+        const fallbackNameB = (b.name || b.ident || "").toString();
+        return fallbackNameA.localeCompare(fallbackNameB);
+    }
+    airports = [...allAirports].sort(sortAirports);
 
     pagination = {
         current_page: page,

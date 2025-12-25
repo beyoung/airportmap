@@ -1,14 +1,9 @@
 import type { APIRoute } from "astro";
 import { AirportDatabase } from "../lib/database";
 
-export const GET: APIRoute = async ({ locals }) => {
+export const GET: APIRoute = async () => {
   try {
-    const db = (locals as any).runtime?.env?.DB;
-    if (!db) {
-      return new Response("Database not available", { status: 500 });
-    }
-
-    const airportDb = new AirportDatabase(db);
+    const airportDb = new AirportDatabase();
 
     // Get country stats for country pages
     const countryStats = await airportDb.getCountryStats();

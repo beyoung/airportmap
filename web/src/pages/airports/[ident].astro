@@ -10,15 +10,7 @@ if (!ident) {
   return Astro.redirect('/');
 }
 
-// Get database from Astro locals
-const db = (Astro.locals as any).runtime?.env?.DB || (Astro.locals as any).DB;
-
-if (!db) {
-  throw new Error('Database not available');
-}
-
-// Create database instance and get airport data
-const airportDb = new AirportDatabase(db);
+const airportDb = new AirportDatabase();
 const key = decodeURIComponent(ident as string);
 let airportData = await airportDb.getAirportByCode(key);
 

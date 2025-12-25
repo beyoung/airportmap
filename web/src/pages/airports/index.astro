@@ -9,40 +9,37 @@ const description =
 const canonicalUrl = "https://airport.ayamap.com/airports/";
 
 // Get URL parameters
-const url = new URL(Astro.request.url);
+const url = Astro.url;
 const currentPage = parseInt(url.searchParams.get("page") || "1");
 const searchQuery = url.searchParams.get("q") || "";
 const countryFilter = url.searchParams.get("country") || "";
 const typeFilter = url.searchParams.get("type") || "";
 const itemsPerPage = 9;
 
-// Get database from Astro locals
-const dbInstance =
-  (Astro.locals as any).runtime?.env?.DB || (Astro.locals as any).DB;
+const db = new AirportDatabase();
+const countries = await db.getCountryStats();
 
-if (!dbInstance) {
-  throw new Error("Database not available");
-}
-
-// Initialize database
-const db = new AirportDatabase(dbInstance);
-
-// Search airports with filters
-const searchResult = await db.getAirportsWithPage({
+const searchResult = await db.searchAirports({
+  query: searchQuery,
+  country: countryFilter,
+  type: typeFilter,
+  page: currentPage,
   limit: itemsPerPage,
-  offset: (currentPage - 1) * itemsPerPage,
 });
 
-const airports = searchResult;
+const airports = searchResult.airports;
 const totalItems = 83247;
 const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-// Get global stats
 const stats = {
   total: 83247,
   large: 485,
   medium: 4687,
   small: 42249,
+  heliport: 21914,
+  seaplane: 1232,
+  balloonport: 57,
+  closed: 12623,
   countries: 246,
 };
 
@@ -110,7 +107,6 @@ function buildUrl(params: Record<string, string | number>) {
           </p>
         </div>
 
-        <!-- Stats Grid -->
         <div
           class="grid grid-cols-2 md:grid-cols-5 gap-3 lg:gap-6 max-w-5xl mx-auto"
         >
@@ -155,6 +151,46 @@ function buildUrl(params: Record<string, string | number>) {
             </div>
           </div>
           <div
+            class="bg-white p-4 lg:p-6 rounded-2xl shadow-sm border border-gray-100 text-center hover:shadow-md transition-shadow"
+          >
+            <div class="text-2xl lg:text-3xl font-bold text-orange-600 mb-1">
+              {stats.heliport.toLocaleString()}
+            </div>
+            <div class="text-xs lg:text-sm font-medium text-gray-500">
+              Heliports
+            </div>
+          </div>
+          <div
+            class="bg-white p-4 lg:p-6 rounded-2xl shadow-sm border border-gray-100 text-center hover:shadow-md transition-shadow"
+          >
+            <div class="text-2xl lg:text-3xl font-bold text-cyan-600 mb-1">
+              {stats.seaplane.toLocaleString()}
+            </div>
+            <div class="text-xs lg:text-sm font-medium text-gray-500">
+              Seaplane Bases
+            </div>
+          </div>
+          <div
+            class="bg-white p-4 lg:p-6 rounded-2xl shadow-sm border border-gray-100 text-center hover:shadow-md transition-shadow"
+          >
+            <div class="text-2xl lg:text-3xl font-bold text-blue-600 mb-1">
+              {stats.balloonport.toLocaleString()}
+            </div>
+            <div class="text-xs lg:text-sm font-medium text-gray-500">
+              Balloonports
+            </div>
+          </div>
+          <div
+            class="bg-white p-4 lg:p-6 rounded-2xl shadow-sm border border-gray-100 text-center hover:shadow-md transition-shadow"
+          >
+            <div class="text-2xl lg:text-3xl font-bold text-red-600 mb-1">
+              {stats.closed.toLocaleString()}
+            </div>
+            <div class="text-xs lg:text-sm font-medium text-gray-500">
+              Closed Airports
+            </div>
+          </div>
+          <!-- <div
             class="bg-white p-4 lg:p-6 rounded-2xl shadow-sm border border-gray-100 text-center hover:shadow-md transition-shadow col-span-2 md:col-span-1"
           >
             <div class="text-2xl lg:text-3xl font-bold text-gray-700 mb-1">
@@ -163,107 +199,95 @@ function buildUrl(params: Record<string, string | number>) {
             <div class="text-xs lg:text-sm font-medium text-gray-500">
               Countries
             </div>
-          </div>
+          </div> -->
         </div>
       </div>
     </div>
 
     <!-- Search and Filter Section -->
-    <!-- <div
-            class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm"
-        >
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                <form
-                    method="GET"
-                    class="flex flex-col lg:flex-row gap-3 lg:gap-4"
-                >
-                    <div class="flex-1 relative">
-                        <div
-                            class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
-                        >
-                            <svg
-                                class="h-5 w-5 text-gray-400"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                                ></path>
-                            </svg>
-                        </div>
-                        <input
-                            type="text"
-                            name="q"
-                            value={searchQuery}
-                            placeholder="Search by name, IATA code, or city..."
-                            class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm transition-shadow"
-                        />
-                    </div>
-                    <div class="grid grid-cols-2 lg:flex gap-3 lg:gap-4">
-                        <select
-                            name="country"
-                            class="block w-full pl-3 pr-8 py-2.5 text-sm border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 rounded-xl"
-                        >
-                            <option value="">All Countries</option>
-                            {
-                                countries.map((country) => (
-                                    <option
-                                        value={country.iso_country}
-                                        selected={
-                                            countryFilter ===
-                                            country.iso_country
-                                        }
-                                    >
-                                        {country.country_name}
-                                    </option>
-                                ))
-                            }
-                        </select>
-                        <select
-                            name="type"
-                            class="block w-full pl-3 pr-8 py-2.5 text-sm border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 rounded-xl"
-                        >
-                            <option value="">All Types</option>
-                            <option
-                                value="large_airport"
-                                selected={typeFilter === "large_airport"}
-                                >Large Airport</option
-                            >
-                            <option
-                                value="medium_airport"
-                                selected={typeFilter === "medium_airport"}
-                                >Medium Airport</option
-                            >
-                            <option
-                                value="small_airport"
-                                selected={typeFilter === "small_airport"}
-                                >Small Airport</option
-                            >
-                            <option
-                                value="heliport"
-                                selected={typeFilter === "heliport"}
-                                >Heliport</option
-                            >
-                            <option
-                                value="seaplane_base"
-                                selected={typeFilter === "seaplane_base"}
-                                >Seaplane Base</option
-                            >
-                        </select>
-                        <button
-                            type="submit"
-                            class="col-span-2 lg:col-span-1 inline-flex justify-center items-center px-6 py-2.5 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
-                        >
-                            Search
-                        </button>
-                    </div>
-                </form>
+    <div
+      class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm"
+    >
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <form method="GET" class="flex flex-col lg:flex-row gap-3 lg:gap-4">
+          <div class="flex-1 relative">
+            <div
+              class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+            >
+              <svg
+                class="h-5 w-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
             </div>
-        </div> -->
+            <input
+              type="text"
+              name="q"
+              value={searchQuery}
+              placeholder="Search by name, IATA code, or city..."
+              class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm transition-shadow"
+            />
+          </div>
+          <div class="grid grid-cols-2 lg:flex gap-3 lg:gap-4">
+            <select
+              name="country"
+              class="block w-full pl-3 pr-8 py-2.5 text-sm border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 rounded-xl"
+            >
+              <option value="">All Countries</option>
+              {
+                countries.map((country) => (
+                  <option
+                    value={country.country}
+                    selected={countryFilter.toUpperCase() === country.country}
+                  >
+                    {country.country_name}
+                  </option>
+                ))
+              }
+            </select>
+            <!-- <select
+              name="type"
+              class="block w-full pl-3 pr-8 py-2.5 text-sm border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 rounded-xl"
+            >
+              <option value="">All Types</option>
+              <option
+                value="large_airport"
+                selected={typeFilter === "large_airport"}>Large Airport</option
+              >
+              <option
+                value="medium_airport"
+                selected={typeFilter === "medium_airport"}
+                >Medium Airport</option
+              >
+              <option
+                value="small_airport"
+                selected={typeFilter === "small_airport"}>Small Airport</option
+              >
+              <option value="heliport" selected={typeFilter === "heliport"}
+                >Heliport</option
+              >
+              <option
+                value="seaplane_base"
+                selected={typeFilter === "seaplane_base"}>Seaplane Base</option
+              >
+            </select> -->
+            <button
+              type="submit"
+              class="col-span-2 lg:col-span-1 inline-flex justify-center items-center px-6 py-2.5 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+            >
+              Search
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <!-- Results Section -->
     <section class="py-8 lg:py-12">
